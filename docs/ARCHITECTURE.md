@@ -19,6 +19,7 @@ src/
 ├── routing.rs           # Edge paths: outline clipping, parallel bends, detours around nodes
 ├── drawing.rs           # Colors, label layout, text and Cairo helpers shared by the canvases
 ├── interaction.rs       # Navigable trait (scroll/zoom/pan), InlineEditor popover
+├── box_canvas.rs        # MermanBoxCanvas: shared canvas for box-and-link diagrams (BoxDiagram trait)
 ├── palette.rs           # MermanPalette: tiles supplied by the active editor
 ├── combo.rs, labels.rs  # Combo row models and translatable enum names
 ├── flowchart/           # Flowchart domain (no GTK): model, parser, serializer, layered layout
@@ -26,21 +27,23 @@ src/
 ├── sequence/            # Sequence domain (no GTK): model, parser, serializer, layout and hit testing
 ├── sequence_editor/     # MermanSequenceCanvas, MermanSequenceInspector, rendering
 ├── class_diagram/       # Class diagram domain (no GTK): model, parser, serializer, class box geometry, layout
-├── class_editor/        # MermanClassCanvas, MermanClassInspector, UML relation heads
+├── class_editor/        # BoxDiagram for class diagrams, MermanClassInspector, UML relation heads
 ├── erd/                 # ERD domain (no GTK): model, parser, serializer, entity box geometry, layout
-└── erd_editor/          # MermanErdCanvas, MermanErdInspector, crow's-foot rendering
+└── erd_editor/          # BoxDiagram for ERDs, MermanErdInspector, crow's-foot rendering
 
 data/resources/ui/*.blp  # Blueprint templates for window, palette, inspectors, shortcuts
 ```
 
-Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its canvas and properties panel. Editor modules depend on the domain and the shared modules, never on each other.
+Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its properties panel. Editor modules depend on the domain and the shared modules, never on each other.
+
+Flowcharts and sequence diagrams have their own canvas widgets. Class diagrams and ERDs share `MermanBoxCanvas`, which implements moving, linking, the add-row button, in-place editing, undo and navigation once; each diagram type implements the `BoxDiagram` trait (geometry, rendering, what rows are and how edited text applies). Inspectors reach the typed model through `BoxCanvas::with::<M>` and `BoxCanvas::edit::<M>`.
 
 ## Data Flow
 
 ```mermaid
 flowchart LR
     Text[Source view] -- "debounced parse" --> Window
-    Window -- "set_chart / set_sequence / set_diagram / set_erd" --> Canvas
+    Window -- "set_chart / set_sequence / set_diagram" --> Canvas
     Canvas -- "changed: serialize" --> Text
     Palette -- "click / drag" --> Canvas
     Inspector -- "edit()" --> Canvas
@@ -101,7 +104,7 @@ Blocks (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`) are stored as 
 
 ## File Format
 
-Files are plain Mermaid.
+Files are plain Mermaid. **Copy Mermaid Source** (Ctrl+Shift+C) copies the source without the `%% @merman pos` lines, for pasting where Mermaid is rendered.
 
 - Flowcharts: manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). `classDef`, `class`, `style`, `linkStyle`, `click` and comments are kept verbatim. `subgraph` is rejected with a parse error.
 - Entity relationship diagrams: manually placed entities use the same position comments as flowcharts. Relationships written with word aliases (`only one to zero or more`) are normalized to symbols when the canvas rewrites the source. `classDef`, `class`, `style` and comments are kept verbatim.

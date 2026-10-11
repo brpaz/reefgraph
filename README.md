@@ -21,6 +21,7 @@
 - Live two-way sync with the Mermaid source shown next to the canvas
 - All flowchart node shapes, solid/dotted/thick links, arrow/circle/cross heads, link labels
 - Automatic layered layout; manual positions are saved as Mermaid comments, so files stay valid Mermaid
+- Copy the Mermaid source without editor metadata, ready to paste into Markdown
 - Undo/redo, zoom and pan, keyboard shortcuts
 
 ## Install
