@@ -1,10 +1,15 @@
 mod application;
+mod canvas;
 mod config;
+mod flowchart;
+mod inspector;
+mod labels;
+mod palette;
 mod window;
 
 use std::path::PathBuf;
 
-use gettextrs::{gettext, LocaleCategory};
+use gettextrs::{LocaleCategory, gettext};
 use gtk::{gio, glib};
 
 use self::application::MermanApplication;
@@ -35,15 +40,4 @@ fn main() -> glib::ExitCode {
 
     let app = MermanApplication::default();
     app.run()
-}
-#[cfg(test)]
-mod tests {
-    #[allow(unused)]
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
 }

@@ -1,4 +1,12 @@
-.title-header{
-  font-size: 36px;
-  font-weight: bold;
+merman-canvas:focus-visible {
+  outline: none;
+}
+
+.zoom-controls {
+  border-radius: 9999px;
+  padding: 3px;
+}
+
+.palette-tile {
+  padding: 6px;
 }
