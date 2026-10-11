@@ -1,0 +1,127 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MermanInspector: Adw.Bin {
+  child: Stack stack {
+    transition-type: crossfade;
+    vhomogeneous: false;
+
+    StackPage {
+      name: "diagram";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Diagram");
+          description: _("Drag shapes onto the canvas, then drag from a node's handles to connect it.");
+
+          Adw.ComboRow direction_row {
+            title: _("Direction");
+          }
+
+          Adw.ActionRow {
+            title: _("Auto Layout");
+            subtitle: _("Discard manual positions");
+            activatable-widget: layout_button;
+
+            [suffix]
+            Button layout_button {
+              label: _("Arrange");
+              valign: center;
+            }
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "node";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Node");
+
+          Adw.EntryRow node_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow node_id_row {
+            title: _("Id");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow node_shape_row {
+            title: _("Shape");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_node_button {
+            label: _("Delete Node");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "edge";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Link");
+
+          Adw.EntryRow edge_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow edge_stroke_row {
+            title: _("Line");
+          }
+
+          Adw.ComboRow edge_start_row {
+            title: _("Start");
+          }
+
+          Adw.ComboRow edge_end_row {
+            title: _("End");
+          }
+
+          Adw.ActionRow {
+            title: _("Reverse Direction");
+            activatable-widget: reverse_button;
+
+            [suffix]
+            Button reverse_button {
+              icon-name: "object-flip-horizontal-symbolic";
+              tooltip-text: _("Reverse Direction");
+              valign: center;
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_edge_button {
+            label: _("Delete Link");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+  };
+}

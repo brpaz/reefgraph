@@ -1,0 +1,195 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MermanApplicationWindow: Adw.ApplicationWindow {
+  width-request: 360;
+  height-request: 294;
+
+  Adw.Breakpoint {
+    condition ("max-width: 720sp")
+
+    setters {
+      split_view.collapsed: true;
+      panel_toggle.active: false;
+    }
+  }
+
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.OverlaySplitView split_view {
+      min-sidebar-width: 200;
+      max-sidebar-width: 260;
+
+      sidebar: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          title-widget: Adw.WindowTitle {
+            title: _("Shapes");
+          };
+        }
+
+        content: $MermanPalette palette {};
+      };
+
+      content: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          [start]
+          ToggleButton sidebar_toggle {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Toggle Shapes");
+            active: bind split_view.show-sidebar bidirectional;
+          }
+
+          [start]
+          Button {
+            icon-name: "document-open-symbolic";
+            tooltip-text: _("Open");
+            action-name: "win.open";
+          }
+
+          [start]
+          Button {
+            icon-name: "document-save-symbolic";
+            tooltip-text: _("Save");
+            action-name: "win.save";
+          }
+
+          title-widget: Adw.WindowTitle window_title {};
+
+          [end]
+          MenuButton {
+            primary: true;
+            icon-name: "open-menu-symbolic";
+            tooltip-text: _("Main Menu");
+            menu-model: primary_menu;
+          }
+
+          [end]
+          ToggleButton panel_toggle {
+            icon-name: "sidebar-show-right-symbolic";
+            tooltip-text: _("Toggle Properties and Source");
+            active: true;
+          }
+
+          [end]
+          Box {
+            styles [
+              "linked",
+            ]
+
+            Button {
+              icon-name: "edit-undo-symbolic";
+              tooltip-text: _("Undo");
+              action-name: "win.undo";
+            }
+
+            Button {
+              icon-name: "edit-redo-symbolic";
+              tooltip-text: _("Redo");
+              action-name: "win.redo";
+            }
+          }
+        }
+
+        content: Paned {
+          shrink-start-child: false;
+          shrink-end-child: false;
+          resize-end-child: false;
+
+          start-child: Overlay {
+            child: $MermanCanvas canvas {
+              hexpand: true;
+              vexpand: true;
+            };
+
+            [overlay]
+            Box {
+              halign: end;
+              valign: end;
+              margin-end: 12;
+              margin-bottom: 12;
+
+              styles [
+                "toolbar",
+                "osd",
+                "zoom-controls",
+              ]
+
+              Button {
+                icon-name: "zoom-out-symbolic";
+                tooltip-text: _("Zoom Out");
+                action-name: "win.zoom-out";
+              }
+
+              Button {
+                icon-name: "zoom-fit-best-symbolic";
+                tooltip-text: _("Fit to Window");
+                action-name: "win.zoom-fit";
+              }
+
+              Button {
+                icon-name: "zoom-in-symbolic";
+                tooltip-text: _("Zoom In");
+                action-name: "win.zoom-in";
+              }
+            }
+          };
+
+          end-child: Paned side_panel {
+            orientation: vertical;
+            width-request: 340;
+            shrink-start-child: false;
+            shrink-end-child: false;
+            visible: bind panel_toggle.active;
+
+            start-child: $MermanInspector inspector {
+              height-request: 220;
+            };
+
+            end-child: Box {
+              orientation: vertical;
+
+              Adw.Banner error_banner {}
+
+              ScrolledWindow source_scroller {
+                vexpand: true;
+                height-request: 160;
+              }
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_New Diagram");
+      action: "win.new";
+    }
+
+    item {
+      label: _("_Open…");
+      action: "win.open";
+    }
+
+    item {
+      label: _("Save _As…");
+      action: "win.save-as";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Keyboard Shortcuts");
+      action: "win.show-help-overlay";
+    }
+
+    item {
+      label: _("_About Merman");
+      action: "app.about";
+    }
+  }
+}

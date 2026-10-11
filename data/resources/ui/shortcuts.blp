@@ -1,0 +1,93 @@
+using Gtk 4.0;
+
+ShortcutsWindow help_overlay {
+  modal: true;
+
+  ShortcutsSection {
+    section-name: "shortcuts";
+    max-height: 12;
+
+    ShortcutsGroup {
+      title: C_("shortcut window", "General");
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "New Diagram");
+        action-name: "win.new";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Open");
+        action-name: "win.open";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Save");
+        action-name: "win.save";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Save As");
+        action-name: "win.save-as";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Show Shortcuts");
+        action-name: "win.show-help-overlay";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Close Window");
+        action-name: "window.close";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Quit");
+        action-name: "app.quit";
+      }
+    }
+
+    ShortcutsGroup {
+      title: C_("shortcut window", "Canvas");
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Edit Label");
+        accelerator: "F2";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Delete Selection");
+        accelerator: "Delete";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Undo");
+        accelerator: "<Control>z";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Redo");
+        accelerator: "<Control><Shift>z";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Zoom In");
+        accelerator: "<Control>plus";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Zoom Out");
+        accelerator: "<Control>minus";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Reset Zoom");
+        accelerator: "<Control>0";
+      }
+
+      ShortcutsShortcut {
+        title: C_("shortcut window", "Clear Selection");
+        accelerator: "Escape";
+      }
+    }
+  }
+}

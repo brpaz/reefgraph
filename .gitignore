@@ -17,6 +17,9 @@ devenv.local.yaml
 # direnv
 .direnv
 
+# Local environment, created from .env.example by devenv
+/.env
+
 repo
 flatpak-build
 flatpak-build-prod

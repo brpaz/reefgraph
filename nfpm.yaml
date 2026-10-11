@@ -28,7 +28,11 @@ overrides:
     depends:
       - libgtk-4-1
       - libglib2.0-0
+      - libadwaita-1-0
+      - libgtksourceview-5-0
   rpm:
     depends:
       - gtk4
       - glib2
+      - libadwaita
+      - gtksourceview5

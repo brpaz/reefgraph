@@ -15,6 +15,11 @@
     cmake
     glib
     gtk4
+    libadwaita
+    gtksourceview5
+    blueprint-compiler
+    desktop-file-utils
+    appstream
     pkg-config
     nfpm
   ];
