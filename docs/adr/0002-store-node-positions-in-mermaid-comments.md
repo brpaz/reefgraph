@@ -8,7 +8,7 @@ Mermaid has no syntax for node coordinates; its renderer always lays diagrams ou
 
 ## Decision
 - The file format is plain Mermaid source (`.mmd`).
-- Manually placed nodes are persisted as comment lines at the end of the file: `%% @merman pos <id> <x> <y>`. Mermaid ignores `%%` comments.
+- Manually placed nodes (flowchart nodes and ERD entities) are persisted as comment lines at the end of the file: `%% @merman pos <id> <x> <y>`. Mermaid ignores `%%` comments.
 - Nodes without a stored position are placed by a layered auto layout (longest-path ranking, barycenter ordering, cycle-breaking DFS), offset to stay consistent with already-placed nodes.
 - While editing the text, nodes keep their current canvas position even when the text has no position line for them, so typing does not make nodes jump. "Auto Layout" discards all stored positions.
 
