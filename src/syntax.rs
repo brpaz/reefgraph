@@ -2,6 +2,11 @@
 
 use std::fmt;
 
+use crate::geometry::Point;
+
+/// Marker of the comment lines that store manually placed node positions.
+const POSITION_META: &str = "@merman pos";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseError {
     /// 1-based line number.
@@ -110,6 +115,30 @@ pub fn split_statements(line: &str) -> Vec<&str> {
     statements
 }
 
+/// Recognizes a `%% @merman pos <id> <x> <y>` comment, given the text after
+/// `%%`. Returns `None` for other comments and `Some(None)` for a position
+/// comment that cannot be read.
+pub fn position_comment(comment: &str) -> Option<Option<(String, Point)>> {
+    let meta = comment.trim_start().strip_prefix(POSITION_META)?;
+    let mut parts = meta.split_whitespace();
+    let mut read = || {
+        let id = parts.next()?.to_string();
+        let x = parts.next()?.parse().ok()?;
+        let y = parts.next()?.parse().ok()?;
+        Some((id, Point::new(x, y)))
+    };
+    Some(read())
+}
+
+/// Comment line storing a node position, rounded to whole units.
+pub fn position_line(id: &str, pos: Point) -> String {
+    format!(
+        "%% {POSITION_META} {id} {} {}",
+        pos.x.round(),
+        pos.y.round()
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,6 +163,19 @@ mod tests {
     fn reports_missing_declaration_and_front_matter_end() {
         assert!(split_source("  \n%% only a comment").is_err());
         assert!(split_source("---\ntitle: x\n").is_err());
+    }
+
+    #[test]
+    fn reads_and_writes_position_comments() {
+        let line = position_line("A", Point::new(10.4, -2.6));
+        assert_eq!(line, "%% @merman pos A 10 -3");
+        let comment = line.strip_prefix("%%").unwrap();
+        assert_eq!(
+            position_comment(comment),
+            Some(Some(("A".into(), Point::new(10.0, -3.0))))
+        );
+        assert_eq!(position_comment(" @merman pos A x"), Some(None));
+        assert_eq!(position_comment(" plain comment"), None);
     }
 
     #[test]

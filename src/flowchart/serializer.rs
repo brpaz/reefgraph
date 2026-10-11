@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use super::model::{Edge, Flowchart, Head, Node, NodeShape, Stroke};
-use super::parser::POSITION_META;
+use crate::syntax::position_line;
 
 const INDENT: &str = "    ";
 
@@ -25,13 +25,7 @@ pub fn serialize(chart: &Flowchart) -> String {
     }
     for node in &chart.nodes {
         if let Some(pos) = node.pos {
-            let _ = writeln!(
-                out,
-                "%% {POSITION_META} {} {} {}",
-                node.id,
-                pos.x.round(),
-                pos.y.round()
-            );
+            let _ = writeln!(out, "{}", position_line(&node.id, pos));
         }
     }
     out

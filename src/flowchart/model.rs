@@ -1,44 +1,8 @@
 pub use crate::geometry::Point;
 pub use crate::ids::RenameError;
+pub use crate::layered::Direction;
 
 use crate::ids;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Direction {
-    #[default]
-    TopBottom,
-    BottomTop,
-    LeftRight,
-    RightLeft,
-}
-
-impl Direction {
-    pub const ALL: [Direction; 4] = [
-        Direction::TopBottom,
-        Direction::BottomTop,
-        Direction::LeftRight,
-        Direction::RightLeft,
-    ];
-
-    pub fn keyword(self) -> &'static str {
-        match self {
-            Direction::TopBottom => "TB",
-            Direction::BottomTop => "BT",
-            Direction::LeftRight => "LR",
-            Direction::RightLeft => "RL",
-        }
-    }
-
-    pub fn from_keyword(s: &str) -> Option<Self> {
-        match s {
-            "TB" | "TD" => Some(Direction::TopBottom),
-            "BT" => Some(Direction::BottomTop),
-            "LR" => Some(Direction::LeftRight),
-            "RL" => Some(Direction::RightLeft),
-            _ => None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Hash)]
 pub enum NodeShape {

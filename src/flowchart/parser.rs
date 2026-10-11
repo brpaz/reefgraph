@@ -1,12 +1,9 @@
 //! Parser for the subset of Mermaid flowchart syntax the editor models.
 
-use super::model::{Direction, Edge, Flowchart, Head, NodeShape, Point, Stroke};
+use super::model::{Direction, Edge, Flowchart, Head, NodeShape, Stroke};
 use crate::ids::is_id_char;
 pub use crate::syntax::ParseError;
-use crate::syntax::{split_source, split_statements};
-
-/// Prefix of the comment lines that store manual node positions.
-pub const POSITION_META: &str = "@merman pos";
+use crate::syntax::{position_comment, split_source, split_statements};
 
 /// Statements kept verbatim without being modelled.
 const PASSTHROUGH_KEYWORDS: &[&str] = &["classDef", "class", "style", "linkStyle", "click"];
@@ -48,8 +45,8 @@ pub fn parse(src: &str) -> Result<Flowchart, ParseError> {
     let mut positions = Vec::new();
     for (line_no, line) in source.body {
         if let Some(comment) = line.strip_prefix("%%") {
-            match comment.trim_start().strip_prefix(POSITION_META) {
-                Some(meta) => positions.extend(parse_position(meta)),
+            match position_comment(comment) {
+                Some(position) => positions.extend(position),
                 None => chart.passthrough.push(line.to_string()),
             }
             continue;
@@ -65,14 +62,6 @@ pub fn parse(src: &str) -> Result<Flowchart, ParseError> {
         }
     }
     Ok(chart)
-}
-
-fn parse_position(meta: &str) -> Option<(String, Point)> {
-    let mut parts = meta.split_whitespace();
-    let id = parts.next()?.to_string();
-    let x = parts.next()?.parse().ok()?;
-    let y = parts.next()?.parse().ok()?;
-    Some((id, Point::new(x, y)))
 }
 
 fn parse_header(header: &str) -> Result<Direction, String> {
@@ -434,6 +423,7 @@ impl<'a> Cursor<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::geometry::Point;
 
     fn edge(chart: &Flowchart, i: usize) -> (&str, &str, &str, Stroke, Head, Head) {
         let e = &chart.edges[i];

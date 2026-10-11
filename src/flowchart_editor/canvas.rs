@@ -19,15 +19,13 @@ use crate::flowchart::{self, Direction, Flowchart, Node, NodeShape, Point};
 use crate::geometry::Rect;
 use crate::history::History;
 use crate::interaction::{InlineEditor, Navigable, install_navigation};
+use crate::routing::{self, Outline};
 use crate::viewport::Viewport;
 
 /// Screen-space radius of connection handles and their hit area.
 const PORT_RADIUS: f64 = 5.0;
 const PORT_HIT_RADIUS: f64 = 10.0;
 const EDGE_HIT_DISTANCE: f64 = 6.0;
-const PARALLEL_EDGE_SPACING: f64 = 24.0;
-/// Detour offsets tried, in order, to route an edge around nodes in its way.
-const DETOUR_OFFSETS: [f64; 6] = [50.0, -50.0, 90.0, -90.0, 150.0, -150.0];
 const SNAP: f64 = 10.0;
 
 /// Canvas operation bound to a keyboard shortcut.
@@ -367,7 +365,7 @@ impl Canvas {
             self.edge_paths(chart)
                 .iter()
                 .enumerate()
-                .map(|(i, path)| (i, geometry::distance_to_path(p, path)))
+                .map(|(i, path)| (i, routing::distance_to_path(p, path)))
                 .filter(|(_, d)| *d <= tolerance)
                 .min_by(|a, b| a.1.total_cmp(&b.1))
                 .map(|(i, _)| i)
@@ -399,60 +397,22 @@ impl Canvas {
     }
 
     fn edge_paths(&self, chart: &Flowchart) -> Vec<Vec<Point>> {
-        let rects: HashMap<&str, (NodeShape, Rect)> = chart
+        let nodes: HashMap<&str, (Outline, Rect)> = chart
             .nodes
             .iter()
-            .filter_map(|n| Some((n.id.as_str(), (n.shape, self.node_rect(n)?))))
+            .filter_map(|n| {
+                Some((
+                    n.id.as_str(),
+                    (geometry::outline(n.shape), self.node_rect(n)?),
+                ))
+            })
             .collect();
-        let pair_key = |from: &str, to: &str| {
-            if from <= to {
-                (from.to_string(), to.to_string())
-            } else {
-                (to.to_string(), from.to_string())
-            }
-        };
-        let mut groups: HashMap<(String, String), Vec<usize>> = HashMap::new();
-        for (i, e) in chart.edges.iter().enumerate() {
-            groups.entry(pair_key(&e.from, &e.to)).or_default().push(i);
-        }
-        chart
+        let edges: Vec<(&str, &str)> = chart
             .edges
             .iter()
-            .enumerate()
-            .map(|(i, e)| {
-                let (Some((fs, fr)), Some((ts, tr))) =
-                    (rects.get(e.from.as_str()), rects.get(e.to.as_str()))
-                else {
-                    return Vec::new();
-                };
-                if e.from == e.to {
-                    return geometry::self_loop_path(*fs, fr);
-                }
-                let key = pair_key(&e.from, &e.to);
-                let group = &groups[&key];
-                let k = group.iter().position(|&j| j == i).unwrap_or(0) as f64;
-                let mut bend = (k - (group.len() - 1) as f64 / 2.0) * PARALLEL_EDGE_SPACING;
-                // Bend direction is relative to the edge direction; keep it
-                // consistent within a group of edges going both ways.
-                if e.from != key.0 {
-                    bend = -bend;
-                }
-                let path = geometry::edge_path(*fs, fr, *ts, tr, bend);
-                let obstacles: Vec<Rect> = rects
-                    .iter()
-                    .filter(|(id, _)| **id != e.from && **id != e.to)
-                    .map(|(_, (_, r))| r.inflate(4.0))
-                    .collect();
-                if !geometry::path_crosses(&path, &obstacles) {
-                    return path;
-                }
-                DETOUR_OFFSETS
-                    .iter()
-                    .map(|offset| geometry::detour_path(*fs, fr, *ts, tr, bend + offset))
-                    .find(|p| !geometry::path_crosses(p, &obstacles))
-                    .unwrap_or(path)
-            })
-            .collect()
+            .map(|e| (e.from.as_str(), e.to.as_str()))
+            .collect();
+        routing::route_edges(&nodes, &edges)
     }
 
     // ----- Rendering --------------------------------------------------------
@@ -475,7 +435,7 @@ impl Canvas {
             .map(|(e, path)| {
                 (
                     drawing::label_layout(self, &e.label),
-                    geometry::path_midpoint(path),
+                    routing::path_midpoint(path),
                 )
             })
             .collect();
@@ -832,7 +792,7 @@ impl Canvas {
             Selection::Edge(i) => {
                 let label = chart.edges.get(*i)?.label.clone();
                 let path = self.edge_paths(chart).swap_remove(*i);
-                Some((label, geometry::path_midpoint(&path)))
+                Some((label, routing::path_midpoint(&path)))
             }
         });
         let (Some((label, anchor)), Some(editor)) = (found, self.imp().editor.get()) else {
