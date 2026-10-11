@@ -16,6 +16,7 @@
 
 - Visual editing of Mermaid flowcharts: drag shapes from the palette, drag between nodes to link them, double-click to edit labels
 - Visual editing of sequence diagrams: participants and actors, messages drawn by dragging between lifelines, notes, activations, autonumbering and `loop`/`alt`/`opt`/`par`/`critical`/`break`/`rect` blocks; reorder participants and rows by dragging
+- Visual editing of class diagrams: classes with stereotypes, generics and attribute/method compartments, UML relations (inheritance, composition, aggregation, association, dependency, realization, lollipop) with cardinalities
 - Visual editing of entity relationship diagrams: entities drawn as tables with typed attributes and PK/FK/UK keys, relationships with crow's-foot cardinalities created by dragging between entities
 - Live two-way sync with the Mermaid source shown next to the canvas
 - All flowchart node shapes, solid/dotted/thick links, arrow/circle/cross heads, link labels

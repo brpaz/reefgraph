@@ -1,6 +1,6 @@
 # Architecture
 
-Merman is a GTK4/libadwaita application written in Rust for editing Mermaid flowcharts, sequence diagrams and entity relationship diagrams. UI layouts are Blueprint files compiled to GtkBuilder XML at build time and bundled into a GResource.
+Merman is a GTK4/libadwaita application written in Rust for editing Mermaid flowcharts, sequence diagrams, class diagrams and entity relationship diagrams. UI layouts are Blueprint files compiled to GtkBuilder XML at build time and bundled into a GResource.
 
 ## Modules
 
@@ -25,6 +25,8 @@ src/
 ├── flowchart_editor/    # MermanFlowchartCanvas, MermanFlowchartInspector, shape geometry and rendering
 ├── sequence/            # Sequence domain (no GTK): model, parser, serializer, layout and hit testing
 ├── sequence_editor/     # MermanSequenceCanvas, MermanSequenceInspector, rendering
+├── class_diagram/       # Class diagram domain (no GTK): model, parser, serializer, class box geometry, layout
+├── class_editor/        # MermanClassCanvas, MermanClassInspector, UML relation heads
 ├── erd/                 # ERD domain (no GTK): model, parser, serializer, entity box geometry, layout
 └── erd_editor/          # MermanErdCanvas, MermanErdInspector, crow's-foot rendering
 
@@ -38,14 +40,14 @@ Each diagram type is a pair of modules: a GTK-free domain module covered by plai
 ```mermaid
 flowchart LR
     Text[Source view] -- "debounced parse" --> Window
-    Window -- "set_chart / set_sequence / set_erd" --> Canvas
+    Window -- "set_chart / set_sequence / set_diagram / set_erd" --> Canvas
     Canvas -- "changed: serialize" --> Text
     Palette -- "click / drag" --> Canvas
     Inspector -- "edit()" --> Canvas
     Canvas -- "selection-changed" --> Inspector
 ```
 
-- The window shows one editor at a time, chosen from the diagram declaration (`flowchart`/`graph`, `sequenceDiagram` or `erDiagram`). Typing a different declaration in the source loads the diagram into the other editor.
+- The window shows one editor at a time, chosen from the diagram declaration (`flowchart`/`graph`, `sequenceDiagram`, `classDiagram` or `erDiagram`). Typing a different declaration in the source loads the diagram into the other editor.
 - Each canvas owns its model. Every user edit goes through `edit`/`try_edit`, which records an undo snapshot and emits `changed`.
 - The window turns `changed` into Mermaid text, replacing the buffer contents as one undoable step. While it does so it sets a `syncing` flag so the change is not parsed back.
 - Text edits are parsed 300 ms after the last keystroke. A valid result replaces the canvas model; a parse error is shown in a banner and the canvas is left alone.
@@ -89,6 +91,10 @@ Edges between the same pair of nodes are bent apart. An edge whose straight path
 
 Relationships use the shared edge routing and are drawn with crow's-foot markers for their cardinalities; non-identifying ones are dashed.
 
+### Class diagram
+
+Same gestures as entity relationship diagrams: drag to move, drag from a handle to relate (a `-->` association), "+" under the selected class adds a member, double-click the header to rename and a member to edit its text. Members are kept as written; those containing `(` are listed in the method compartment, `$` and `*` render underlined (static) and italic (abstract), and `~T~` generics display as `<T>`. Relation heads (inheritance, composition, aggregation, arrow, lollipop) are set per end in the inspector.
+
 ### Blocks in sequence diagrams
 
 Blocks (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`) are stored as flat start/branch/end markers in the item list, so their extent changes by dragging the markers like any other row. `Sequence::validate` keeps them balanced.
@@ -99,6 +105,7 @@ Files are plain Mermaid.
 
 - Flowcharts: manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). `classDef`, `class`, `style`, `linkStyle`, `click` and comments are kept verbatim. `subgraph` is rejected with a parse error.
 - Entity relationship diagrams: manually placed entities use the same position comments as flowcharts. Relationships written with word aliases (`only one to zero or more`) are normalized to symbols when the canvas rewrites the source. `classDef`, `class`, `style` and comments are kept verbatim.
+- Class diagrams: manually placed classes use the same position comments. Classes only mentioned in relations are declared with `class Name` when the canvas rewrites the source. `note`, `click`, `link`, `callback`, `cssClass`, `classDef`, `style` and comments are kept verbatim; `namespace` and `:::style` are rejected with a parse error.
 - Sequence diagrams: layout follows participant and statement order, so no positions are stored. Participants are always declared explicitly when serializing. `links`, `link`, `properties`, `details` and comments are kept verbatim. `box`, `create` and `destroy` are rejected with a parse error.
 
 ## Decisions
