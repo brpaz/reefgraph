@@ -1,0 +1,59 @@
+# Merman
+
+> Visual WYSIWYG editor for Mermaid diagrams
+
+[![CI](https://img.shields.io/github/actions/workflow/status/brpaz/merman/ci.yml?branch=main&label=CI&logo=github&style=for-the-badge)](https://github.com/brpaz/merman/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE.md)
+[![Flatpak](https://img.shields.io/badge/flatpak-ready-4A90D9?style=for-the-badge&logo=flatpak&logoColor=white)](https://flatpak.org)
+
+<div align="center">
+
+![Main window](data/resources/screenshots/screenshot1.png "Main window")
+
+</div>
+
+## Features
+
+- Feature 1
+- Feature 2
+- Feature 3
+
+## Install
+
+Download the package for your system from the [latest release](https://github.com/brpaz/merman/releases/latest):
+
+```bash
+# Flatpak
+flatpak install --user dev.brunopaz.Merman.flatpak
+flatpak run dev.brunopaz.Merman
+
+# Debian/Ubuntu
+sudo apt install ./merman.deb
+
+# Fedora
+sudo dnf install ./merman.rpm
+```
+
+## Build from Source
+
+```bash
+git clone https://github.com/brpaz/merman
+cd merman
+task run
+```
+
+Full prerequisites, running tests, building the Flatpak/`.deb`/`.rpm`, and the Taskfile reference: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Contributors
+
+<a href="https://github.com/brpaz/merman/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=brpaz/merman" alt="Contributors" />
+</a>
+
+## License
+
+This repo is MIT licensed. See [LICENSE.md](LICENSE.md).

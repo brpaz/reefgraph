@@ -1,0 +1,24 @@
+/target/
+/_build/
+/build/
+/builddir/
+/build-aux/app
+.flatpak-builder
+*.ui.in~
+*.ui~
+/.flatpak/
+/vendor
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+repo
+flatpak-build
+flatpak-build-prod
+flatpak
+*.flatpak

@@ -1,0 +1,23 @@
+#
+#  Refer for explanation to following link:
+#  https://github.com/evilmartians/lefthook/blob/master/docs/# configuration.md
+#
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "src/*.rs"
+      run: cargo fmt --all
+      stage_fixed: true
+    lint:
+      glob: "src/*.rs"
+      run: cargo clippy --allow-dirty --fix --all-targets --all-features -- -D warnings
+      stage_fixed: true
+    test:
+      run: cargo test --all
+pre-push:
+  commands:
+    commitlint:
+      run: |
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        commitlint --from origin/$CURRENT_BRANCH --to HEAD
