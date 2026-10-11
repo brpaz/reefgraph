@@ -36,7 +36,7 @@ data/resources/ui/*.blp  # Blueprint templates for window, palette, inspectors, 
 
 Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its properties panel. Editor modules depend on the domain and the shared modules, never on each other.
 
-Flowcharts and sequence diagrams have their own canvas widgets. Class diagrams and ERDs share `MermanBoxCanvas`, which implements moving, linking, the add-row button, in-place editing, undo and navigation once; each diagram type implements the `BoxDiagram` trait (geometry, rendering, what rows are and how edited text applies). Inspectors reach the typed model through `BoxCanvas::with::<M>` and `BoxCanvas::edit::<M>`.
+Flowcharts and sequence diagrams have their own canvas widgets. Class diagrams and ERDs share `MermanBoxCanvas`, which implements moving, linking, the add-row button, in-place editing, undo and navigation once; each diagram type implements the `BoxDiagram` trait (geometry, rendering, what rows are and how edited text applies). Inspectors reach the typed model through `BoxCanvas::with::<M>` and `BoxCanvas::edit::<M>`; see [ADR 0003](adr/0003-shared-box-canvas.md).
 
 ## Data Flow
 
@@ -104,7 +104,7 @@ Blocks (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`) are stored as 
 
 ## File Format
 
-Files are plain Mermaid. **Copy Mermaid Source** (Ctrl+Shift+C) copies the source without the `%% @merman pos` lines, for pasting where Mermaid is rendered.
+Files are plain Mermaid. **Copy Mermaid Source** (Ctrl+Shift+C) copies the source without the `%% @merman pos <id> <x> <y>` lines (other comments and line endings are kept), for pasting where Mermaid is rendered.
 
 - Flowcharts: manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). `classDef`, `class`, `style`, `linkStyle`, `click` and comments are kept verbatim. `subgraph` is rejected with a parse error.
 - Entity relationship diagrams: manually placed entities use the same position comments as flowcharts. Relationships written with word aliases (`only one to zero or more`) are normalized to symbols when the canvas rewrites the source. `classDef`, `class`, `style` and comments are kept verbatim.
@@ -115,3 +115,4 @@ Files are plain Mermaid. **Copy Mermaid Source** (Ctrl+Shift+C) copies the sourc
 
 - [ADR 0001: Native canvas with own Mermaid parser](adr/0001-native-canvas-with-own-mermaid-parser.md)
 - [ADR 0002: Store node positions in Mermaid comments](adr/0002-store-node-positions-in-mermaid-comments.md)
+- [ADR 0003: Shared canvas for box-and-link diagrams](adr/0003-shared-box-canvas.md)
