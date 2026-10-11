@@ -115,37 +115,30 @@ pub fn split_statements(line: &str) -> Vec<&str> {
     statements
 }
 
-/// Recognizes a `%% @merman pos <id> <x> <y>` comment, given the text after
-/// `%%`. Returns `None` for other comments and `Some(None)` for a position
-/// comment that cannot be read.
-pub fn position_comment(comment: &str) -> Option<Option<(String, Point)>> {
+/// Reads a `%% @merman pos <id> <x> <y>` comment, given the text after
+/// `%%`. Anything else, including comments that only look similar, is `None`.
+pub fn position_comment(comment: &str) -> Option<(String, Point)> {
     let meta = comment.trim_start().strip_prefix(POSITION_META)?;
+    if !meta.starts_with(char::is_whitespace) {
+        return None;
+    }
     let mut parts = meta.split_whitespace();
-    let mut read = || {
-        let id = parts.next()?.to_string();
-        let x = parts.next()?.parse().ok()?;
-        let y = parts.next()?.parse().ok()?;
-        Some((id, Point::new(x, y)))
-    };
-    Some(read())
+    let id = parts.next()?.to_string();
+    let x = parts.next()?.parse().ok()?;
+    let y = parts.next()?.parse().ok()?;
+    parts.next().is_none().then(|| (id, Point::new(x, y)))
 }
 
 /// Source without the comments this editor adds for itself, for use outside
-/// of it. Other comments are kept.
+/// of it. Other comments and the line endings are kept as they are.
 pub fn strip_editor_comments(src: &str) -> String {
-    let mut out: String = src
-        .lines()
+    src.split_inclusive('\n')
         .filter(|line| {
             line.trim()
                 .strip_prefix("%%")
                 .is_none_or(|comment| position_comment(comment).is_none())
         })
-        .collect::<Vec<_>>()
-        .join("\n");
-    if src.ends_with('\n') {
-        out.push('\n');
-    }
-    out
+        .collect()
 }
 
 /// Comment line storing a node position, rounded to whole units.
@@ -190,20 +183,28 @@ mod tests {
         let comment = line.strip_prefix("%%").unwrap();
         assert_eq!(
             position_comment(comment),
-            Some(Some(("A".into(), Point::new(10.0, -3.0))))
+            Some(("A".into(), Point::new(10.0, -3.0)))
         );
-        assert_eq!(position_comment(" @merman pos A x"), Some(None));
+        assert_eq!(position_comment(" @merman pos A x"), None);
+        assert_eq!(position_comment(" @merman pos A 1 2 3"), None);
+        assert_eq!(position_comment(" @merman posX A 1 2"), None);
         assert_eq!(position_comment(" plain comment"), None);
     }
 
     #[test]
     fn strips_only_editor_comments() {
-        let src = "flowchart TD\n    A --> B\n    %% keep me\n%% @merman pos A 1 2\n  %% @merman pos B 3 4\n";
+        let src = "flowchart TD\n    A --> B\n    %% keep me\n%% @merman pos A 1 2\n  %% @merman pos B 3 4\n%% @merman possible rename\n%% @merman pos C x\n";
         assert_eq!(
             strip_editor_comments(src),
-            "flowchart TD\n    A --> B\n    %% keep me\n"
+            "flowchart TD\n    A --> B\n    %% keep me\n%% @merman possible rename\n%% @merman pos C x\n"
         );
         assert_eq!(strip_editor_comments("graph TD"), "graph TD");
+    }
+
+    #[test]
+    fn stripping_keeps_line_endings() {
+        let src = "graph TD\r\n%% @merman pos A 1 2\r\nA --> B\r\n";
+        assert_eq!(strip_editor_comments(src), "graph TD\r\nA --> B\r\n");
     }
 
     #[test]

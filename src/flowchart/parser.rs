@@ -46,7 +46,7 @@ pub fn parse(src: &str) -> Result<Flowchart, ParseError> {
     for (line_no, line) in source.body {
         if let Some(comment) = line.strip_prefix("%%") {
             match position_comment(comment) {
-                Some(position) => positions.extend(position),
+                Some(position) => positions.push(position),
                 None => chart.passthrough.push(line.to_string()),
             }
             continue;
@@ -581,6 +581,16 @@ mod tests {
         assert_eq!(chart.nodes[0].pos, Some(Point::new(10.0, 20.5)));
         assert_eq!(chart.nodes[1].pos, None);
         assert!(chart.passthrough.is_empty());
+    }
+
+    #[test]
+    fn keeps_unreadable_position_comments_as_comments() {
+        let chart = parse("flowchart TD\n  A\n%% @merman pos A x y\n%% @merman possible").unwrap();
+        assert_eq!(chart.nodes[0].pos, None);
+        assert_eq!(
+            chart.passthrough,
+            ["%% @merman pos A x y", "%% @merman possible"]
+        );
     }
 
     #[test]

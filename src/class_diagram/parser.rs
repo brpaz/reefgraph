@@ -37,7 +37,7 @@ pub fn parse(src: &str) -> Result<ClassDiagram, ParseError> {
     for (line_no, line) in source.body {
         if let Some(comment) = line.strip_prefix("%%") {
             match position_comment(comment) {
-                Some(position) => positions.extend(position),
+                Some(position) => positions.push(position),
                 None => diagram.passthrough.push(line.to_string()),
             }
             continue;

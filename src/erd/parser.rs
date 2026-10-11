@@ -28,7 +28,7 @@ pub fn parse(src: &str) -> Result<Erd, ParseError> {
     for (line_no, line) in source.body {
         if let Some(comment) = line.strip_prefix("%%") {
             match position_comment(comment) {
-                Some(position) => positions.extend(position),
+                Some(position) => positions.push(position),
                 None => erd.passthrough.push(line.to_string()),
             }
             continue;
