@@ -7,9 +7,9 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 
-use super::canvas::{Canvas, Selection};
+use crate::box_canvas::{BoxCanvas as Canvas, Selection};
 use crate::class_diagram::model::Direction;
-use crate::class_diagram::{Class, Head, Member, Relation};
+use crate::class_diagram::{Class, ClassDiagram, Head, Member, Relation};
 use crate::combo::{index_of, string_list};
 use crate::labels;
 
@@ -146,7 +146,8 @@ impl Inspector {
         }
 
         self.on_selected(&imp.direction_row, |canvas, i| {
-            canvas.set_direction(direction_choices()[i]);
+            let direction = direction_choices()[i];
+            canvas.edit_and_relayout::<ClassDiagram>(|d| d.direction = direction);
         });
         imp.layout_button.connect_clicked(glib::clone!(
             #[weak(rename_to = inspector)]
@@ -200,8 +201,8 @@ impl Inspector {
                 let Some(canvas) = inspector.canvas() else {
                     return;
                 };
-                if let Some(Selection::Class(id)) = canvas.selection() {
-                    canvas.add_member(&id);
+                if let Some(Selection::Box(id)) = canvas.selection() {
+                    canvas.add_row(&id);
                 }
             }
         ));
@@ -319,10 +320,10 @@ impl Inspector {
         let Some(canvas) = self.canvas() else {
             return;
         };
-        let Some(Selection::Class(id)) = canvas.selection() else {
+        let Some(Selection::Box(id)) = canvas.selection() else {
             return;
         };
-        if let Err(err) = canvas.rename_class(&id, row.text().trim()) {
+        if let Err(err) = canvas.rename_box(&id, row.text().trim()) {
             row.add_css_class("error");
             row.set_tooltip_text(Some(&err.to_string()));
         } else {
@@ -337,9 +338,9 @@ impl Inspector {
         let imp = self.imp();
         imp.updating.set(true);
         let selection = canvas.selection();
-        canvas.with_diagram(|diagram| {
+        canvas.with::<ClassDiagram, _>(|diagram| {
             let page = match &selection {
-                Some(Selection::Class(id)) => diagram.class(id).map(|class| {
+                Some(Selection::Box(id)) => diagram.class(id).map(|class| {
                     imp.class_name_row.set_text(&class.id);
                     imp.class_name_row.remove_css_class("error");
                     imp.class_label_row.set_text(if class.label == class.id {
@@ -353,7 +354,7 @@ impl Inspector {
                     self.show_members(&canvas, class);
                     "class"
                 }),
-                Some(Selection::Relation(i)) => diagram.relations.get(*i).map(|r| {
+                Some(Selection::Link(i)) => diagram.relations.get(*i).map(|r| {
                     let names = string_list(diagram.classes.iter().map(|c| c.label.clone()));
                     let position = |id: &str| {
                         diagram.classes.iter().position(|c| c.id == id).unwrap_or(0) as u32
@@ -419,7 +420,7 @@ impl Inspector {
                 id,
                 move |row| {
                     let text = row.text().trim().to_string();
-                    canvas.edit(|diagram| {
+                    canvas.edit::<ClassDiagram>(|diagram| {
                         if let Some(class) = diagram.class_mut(&id)
                             && index < class.members.len()
                             && !text.is_empty()
@@ -433,7 +434,7 @@ impl Inspector {
                 #[weak]
                 canvas,
                 move |_| {
-                    canvas.edit(|diagram| {
+                    canvas.edit::<ClassDiagram>(|diagram| {
                         if let Some(class) = diagram.class_mut(&id)
                             && index < class.members.len()
                         {
@@ -450,8 +451,8 @@ impl Inspector {
 }
 
 fn edit_class(canvas: &Canvas, f: impl FnOnce(&mut Class)) {
-    if let Some(Selection::Class(id)) = canvas.selection() {
-        canvas.edit(|diagram| {
+    if let Some(Selection::Box(id)) = canvas.selection() {
+        canvas.edit::<ClassDiagram>(|diagram| {
             if let Some(class) = diagram.class_mut(&id) {
                 f(class);
             }
@@ -461,10 +462,10 @@ fn edit_class(canvas: &Canvas, f: impl FnOnce(&mut Class)) {
 
 /// Edits the selected relation, also passing the class ids in order.
 fn edit_relation(canvas: &Canvas, f: impl FnOnce(&mut Relation, &[String])) {
-    let Some(Selection::Relation(index)) = canvas.selection() else {
+    let Some(Selection::Link(index)) = canvas.selection() else {
         return;
     };
-    canvas.edit(|diagram| {
+    canvas.edit::<ClassDiagram>(|diagram| {
         let ids: Vec<String> = diagram.classes.iter().map(|c| c.id.clone()).collect();
         if let Some(r) = diagram.relations.get_mut(index) {
             f(r, &ids);

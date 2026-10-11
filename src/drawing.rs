@@ -99,6 +99,45 @@ pub fn label_layout(widget: &impl IsA<gtk::Widget>, text: &str) -> pango::Layout
     layout
 }
 
+/// Label queued for drawing on top of a canvas's geometry.
+#[derive(Debug, Clone)]
+pub struct Text {
+    pub text: String,
+    pub at: Point,
+    pub color: gdk::RGBA,
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
+}
+
+impl Text {
+    pub fn plain(text: impl Into<String>, at: Point, color: gdk::RGBA) -> Self {
+        Self {
+            text: text.into(),
+            at,
+            color,
+            bold: false,
+            italic: false,
+            underline: false,
+        }
+    }
+
+    /// Appends the label, centered on its canvas point.
+    pub fn draw(
+        &self,
+        widget: &impl IsA<gtk::Widget>,
+        snapshot: &gtk::Snapshot,
+        viewport: &Viewport,
+    ) {
+        if self.text.is_empty() {
+            return;
+        }
+        let layout = label_layout(widget, &self.text);
+        apply_style(&layout, self.bold, self.italic, self.underline);
+        draw_text(snapshot, viewport, &layout, self.at, &self.color);
+    }
+}
+
 /// Applies font styles to the whole text of `layout`.
 pub fn apply_style(layout: &pango::Layout, bold: bool, italic: bool, underline: bool) {
     if !(bold || italic || underline) {

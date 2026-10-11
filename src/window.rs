@@ -8,6 +8,7 @@ use gtk::{gio, glib};
 use sourceview5::prelude::*;
 
 use crate::application::MermanApplication;
+use crate::box_canvas::BoxCanvas;
 use crate::config::{APP_ID, PROFILE};
 use crate::diagram::{self, Diagram, DiagramKind};
 use crate::flowchart::{self, NodeShape};
@@ -45,9 +46,9 @@ mod imp {
         #[template_child]
         pub sequence_canvas: TemplateChild<sequence_editor::Canvas>,
         #[template_child]
-        pub erd_canvas: TemplateChild<erd_editor::Canvas>,
+        pub erd_canvas: TemplateChild<BoxCanvas>,
         #[template_child]
-        pub class_canvas: TemplateChild<class_editor::Canvas>,
+        pub class_canvas: TemplateChild<BoxCanvas>,
         #[template_child]
         pub inspector_stack: TemplateChild<gtk::Stack>,
         #[template_child]
@@ -113,9 +114,8 @@ mod imp {
             flowchart_editor::Inspector::ensure_type();
             sequence_editor::Canvas::ensure_type();
             sequence_editor::Inspector::ensure_type();
-            erd_editor::Canvas::ensure_type();
+            BoxCanvas::ensure_type();
             erd_editor::Inspector::ensure_type();
-            class_editor::Canvas::ensure_type();
             class_editor::Inspector::ensure_type();
             Palette::ensure_type();
             klass.bind_template();
@@ -411,14 +411,10 @@ impl MermanApplicationWindow {
                 }
             }
             DiagramKind::Erd => {
-                if let Some(preset) = erd_editor::EntityPreset::from_id(id) {
-                    imp.erd_canvas.add_entity_at_center(preset.attributes());
-                }
+                imp.erd_canvas.add_box(id, None);
             }
             DiagramKind::Class => {
-                if let Some(preset) = class_editor::ClassPreset::from_id(id) {
-                    imp.class_canvas.add_class_at_center(preset.annotations());
-                }
+                imp.class_canvas.add_box(id, None);
             }
         }
     }
@@ -515,8 +511,8 @@ impl MermanApplicationWindow {
         match diagram {
             Diagram::Flowchart(chart) => imp.flowchart_canvas.set_chart(chart),
             Diagram::Sequence(seq) => imp.sequence_canvas.set_sequence(seq),
-            Diagram::Erd(erd) => imp.erd_canvas.set_erd(erd),
-            Diagram::Class(diagram) => imp.class_canvas.set_diagram(diagram),
+            Diagram::Erd(erd) => imp.erd_canvas.set_diagram(Box::new(erd)),
+            Diagram::Class(diagram) => imp.class_canvas.set_diagram(Box::new(diagram)),
         }
     }
 
@@ -527,8 +523,8 @@ impl MermanApplicationWindow {
         match diagram {
             Diagram::Flowchart(chart) => imp.flowchart_canvas.load_chart(chart),
             Diagram::Sequence(seq) => imp.sequence_canvas.load_sequence(seq),
-            Diagram::Erd(erd) => imp.erd_canvas.load_erd(erd),
-            Diagram::Class(diagram) => imp.class_canvas.load_diagram(diagram),
+            Diagram::Erd(erd) => imp.erd_canvas.load_diagram(Box::new(erd)),
+            Diagram::Class(diagram) => imp.class_canvas.load_diagram(Box::new(diagram)),
         }
     }
 
@@ -538,8 +534,11 @@ impl MermanApplicationWindow {
         let text = match imp.kind.get() {
             DiagramKind::Flowchart => imp.flowchart_canvas.with_chart(flowchart::serialize),
             DiagramKind::Sequence => imp.sequence_canvas.with_sequence(sequence::serialize),
-            DiagramKind::Erd => imp.erd_canvas.with_erd(erd::serialize),
-            DiagramKind::Class => imp.class_canvas.with_diagram(class_diagram::serialize),
+            DiagramKind::Erd => imp.erd_canvas.with(erd::serialize).unwrap_or_default(),
+            DiagramKind::Class => imp
+                .class_canvas
+                .with(class_diagram::serialize)
+                .unwrap_or_default(),
         };
         if text == self.source_text() {
             return;

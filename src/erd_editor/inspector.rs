@@ -7,10 +7,10 @@ use adw::subclass::prelude::*;
 use gettextrs::gettext;
 use gtk::glib;
 
-use super::canvas::{Canvas, Selection};
+use crate::box_canvas::{BoxCanvas as Canvas, Selection};
 use crate::combo::{index_of, string_list};
 use crate::erd::model::Direction;
-use crate::erd::{Attribute, Cardinality, Relationship};
+use crate::erd::{Attribute, Cardinality, Erd, Relationship};
 use crate::labels;
 
 mod imp {
@@ -143,7 +143,8 @@ impl Inspector {
         }
 
         self.on_selected(&imp.direction_row, |canvas, i| {
-            canvas.set_direction(direction_choices()[i]);
+            let direction = direction_choices()[i];
+            canvas.edit_and_relayout::<Erd>(|erd| erd.direction = direction);
         });
         imp.layout_button.connect_clicked(glib::clone!(
             #[weak(rename_to = inspector)]
@@ -170,9 +171,9 @@ impl Inspector {
                 let Some(canvas) = inspector.canvas() else {
                     return;
                 };
-                if let Some(Selection::Entity(id)) = canvas.selection() {
+                if let Some(Selection::Box(id)) = canvas.selection() {
                     let text = row.text().trim().to_string();
-                    canvas.edit(|erd| {
+                    canvas.edit::<Erd>(|erd| {
                         if let Some(e) = erd.entity_mut(&id) {
                             e.label = if text.is_empty() { id.clone() } else { text };
                         }
@@ -187,8 +188,8 @@ impl Inspector {
                 let Some(canvas) = inspector.canvas() else {
                     return;
                 };
-                if let Some(Selection::Entity(id)) = canvas.selection() {
-                    canvas.add_attribute(&id);
+                if let Some(Selection::Box(id)) = canvas.selection() {
+                    canvas.add_row(&id);
                 }
             }
         ));
@@ -294,10 +295,10 @@ impl Inspector {
         let Some(canvas) = self.canvas() else {
             return;
         };
-        let Some(Selection::Entity(id)) = canvas.selection() else {
+        let Some(Selection::Box(id)) = canvas.selection() else {
             return;
         };
-        if let Err(err) = canvas.rename_entity(&id, row.text().trim()) {
+        if let Err(err) = canvas.rename_box(&id, row.text().trim()) {
             row.add_css_class("error");
             row.set_tooltip_text(Some(&err.to_string()));
         } else {
@@ -312,9 +313,9 @@ impl Inspector {
         let imp = self.imp();
         imp.updating.set(true);
         let selection = canvas.selection();
-        canvas.with_erd(|erd| {
+        canvas.with::<Erd, _>(|erd| {
             let page = match &selection {
-                Some(Selection::Entity(id)) => erd.entity(id).map(|entity| {
+                Some(Selection::Box(id)) => erd.entity(id).map(|entity| {
                     imp.entity_name_row.set_text(&entity.id);
                     imp.entity_name_row.remove_css_class("error");
                     imp.entity_label_row.set_text(if entity.label == entity.id {
@@ -325,7 +326,7 @@ impl Inspector {
                     self.show_attributes(&canvas, &entity.id, &entity.attributes);
                     "entity"
                 }),
-                Some(Selection::Relationship(i)) => erd.relationships.get(*i).map(|r| {
+                Some(Selection::Link(i)) => erd.relationships.get(*i).map(|r| {
                     let names = string_list(erd.entities.iter().map(|e| e.label.clone()));
                     let position =
                         |id: &str| erd.entities.iter().position(|e| e.id == id).unwrap_or(0) as u32;
@@ -380,7 +381,7 @@ impl Inspector {
                 #[strong]
                 id,
                 move |row| match Attribute::parse(row.text().trim()) {
-                    Ok(attribute) => canvas.edit(|erd| {
+                    Ok(attribute) => canvas.edit::<Erd>(|erd| {
                         if let Some(slot) = erd
                             .entity_mut(&id)
                             .and_then(|e| e.attributes.get_mut(index))
@@ -399,7 +400,7 @@ impl Inspector {
                 #[weak]
                 canvas,
                 move |_| {
-                    canvas.edit(|erd| {
+                    canvas.edit::<Erd>(|erd| {
                         if let Some(e) = erd.entity_mut(&id)
                             && index < e.attributes.len()
                         {
@@ -417,10 +418,10 @@ impl Inspector {
 
 /// Edits the selected relationship, also passing the entity ids in order.
 fn edit_relationship(canvas: &Canvas, f: impl FnOnce(&mut Relationship, &[String])) {
-    let Some(Selection::Relationship(index)) = canvas.selection() else {
+    let Some(Selection::Link(index)) = canvas.selection() else {
         return;
     };
-    canvas.edit(|erd| {
+    canvas.edit::<Erd>(|erd| {
         let ids: Vec<String> = erd.entities.iter().map(|e| e.id.clone()).collect();
         if let Some(r) = erd.relationships.get_mut(index) {
             f(r, &ids);

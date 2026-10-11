@@ -1,10 +1,9 @@
 //! Class diagram editing UI: canvas, properties panel and palette items.
 
-mod canvas;
+mod diagram;
 mod inspector;
 mod render;
 
-pub use canvas::Canvas;
 pub use inspector::Inspector;
 
 use gettextrs::gettext;

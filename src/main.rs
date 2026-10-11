@@ -1,4 +1,5 @@
 mod application;
+mod box_canvas;
 mod class_diagram;
 mod class_editor;
 mod combo;
