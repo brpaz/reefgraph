@@ -14,9 +14,13 @@
 
 ## Features
 
-- Feature 1
-- Feature 2
-- Feature 3
+- Visual editing of Mermaid flowcharts: drag shapes from the palette, drag between nodes to link them, double-click to edit labels
+- Live two-way sync with the Mermaid source shown next to the canvas
+- All flowchart node shapes, solid/dotted/thick links, arrow/circle/cross heads, link labels
+- Automatic layered layout; manual positions are saved as Mermaid comments, so files stay valid Mermaid
+- Undo/redo, zoom and pan, keyboard shortcuts
+
+Sequence diagrams and entity relationship diagrams are planned.
 
 ## Install
 

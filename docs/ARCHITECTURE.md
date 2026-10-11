@@ -1,241 +1,69 @@
 # Architecture
 
-This document describes the architecture of the GTK application template.
+Merman is a GTK4/libadwaita application written in Rust. UI layouts are Blueprint files compiled to GtkBuilder XML at build time and bundled into a GResource.
 
-## Overview
-
-The template provides a modern GTK4 application using:
-- **GTK4** with GObject subclassing
-- **Meson** build system
-- **Rust** with glib/gio bindings
-
-## Project Structure
+## Modules
 
 ```
-├── src/
-│   ├── main.rs        # Entry point
-│   ├── application.rs # Application subclass
-│   ├── window.rs      # Main window subclass
-│   └── config.rs      # Build-time configuration
-├── data/
-│   └── resources/
-│       ├── ui/        # GTK UI definitions
-│       └── style.css # Application styles
-├── meson.build        # Meson build definition
-└── Cargo.toml        # Rust crate definition
+src/
+├── main.rs            # i18n, resource loading, application start
+├── application.rs     # AdwApplication: actions, accelerators, about dialog, file open from CLI
+├── window.rs          # Main window: wires components, source <-> canvas sync, file I/O
+├── flowchart/         # Domain, no GTK dependency
+│   ├── model.rs       # Flowchart, Node, Edge, shapes, strokes, heads
+│   ├── parser.rs      # Mermaid flowchart text -> model
+│   ├── serializer.rs  # Model -> Mermaid flowchart text
+│   └── layout.rs      # Layered auto layout
+├── canvas/            # MermanCanvas widget
+│   ├── mod.rs         # State, gestures, drag-and-drop, inline label editor, rendering
+│   ├── geometry.rs    # Shape sizes, outline clipping, edge paths and routing, hit testing
+│   ├── render.rs      # Cairo drawing of shapes, edges, handles
+│   └── history.rs     # Snapshot undo/redo stack
+├── palette.rs         # MermanPalette: shape tiles (click or drag onto the canvas)
+├── inspector.rs       # MermanInspector: properties of diagram / node / link
+└── labels.rs          # Translatable names for model enums
+
+data/resources/ui/*.blp  # Blueprint templates for window, palette, inspector, shortcuts
 ```
 
-## Application Model
-
-### Entry Point (`main.rs`)
-
-The entry point initializes:
-1. **Logging** - `tracing_subscriber` for debug output
-2. **Internationalization** - `gettextrs` for translations
-3. **Resources** - GTK resource bundle loading
-4. **Application instance** - Creates and runs the application
-
-### Application Subclass
-
-`application.rs` defines `{{ app_main_class }}Application`:
-
-- Extends `gtk::Application`
-- Manages the main window lifecycle
-- Sets up actions, accelerators, and CSS
-- Provides the about dialog
-
-```
-{{ app_main_class }}Application
-    ├── activate()      # Creates/shows main window on activation
-    ├── startup()       # Sets up CSS, actions, accelerators
-    └── run()           # Runs the application
-```
-
-### Window Subclass
-
-`window.rs` defines `{{ app_main_class }}ApplicationWindow`:
-
-- Extends `gtk::ApplicationWindow`
-- Uses `#[derive(gtk::CompositeTemplate)]` for UI binding
-- Saves/restores window size via GSettings
-- Supports devel profile CSS class
-
-```
-{{ app_main_class }}ApplicationWindow
-    ├── new()           # Constructor
-    ├── load_window_size()  # Restore from GSettings
-    └── save_window_size() # Persist to GSettings
-```
-
-## Configuration
-
-`config.rs` provides build-time configuration via the `config_var!` macro:
-
-```rust
-config_var!(APP_ID);      // Application ID
-config_var!(PROFILE);    // Build profile (Devel/Release)
-config_var!(VERSION);    // Version string
-config_var!(LOCALEDIR); // Translation directory
-config_var!(PKGDATADIR);// Data directory
-```
-
-These are set by Meson at compile time via `MESON_<VAR>` environment variables.
-
-## UI Definition
-
-Windows use GTK UI templates defined in XML:
-
-```xml
-<template class="{{ app_main_class }}ApplicationWindow" parent="GtkApplicationWindow">
-  <child type="titlebar">
-    <object class="GtkHeaderBar" id="headerbar">
-      <!-- Header bar content -->
-    </object>
-  </child>
-  <child>
-    <!-- Window content -->
-  </child>
-</template>
-```
-
-### Template Child Access
-
-Child widgets are accessed via `#[template_child]`:
-
-```rust
-#[derive(Debug, gtk::CompositeTemplate)]
-#[template(resource = "/com/example/myapp/ui/window.ui")]
-pub struct MyAppWindow {
-    #[template_child]
-    pub headerbar: TemplateChild<gtk::HeaderBar>,
-}
-```
-
-## Actions and Accelerators
-
-### GTK Actions
-
-Actions are defined using `gio::ActionEntry`:
-
-```rust
-let action_quit = gio::ActionEntry::builder("quit")
-    .activate(|app, _, _| {
-        app.quit();
-    })
-    .build();
-self.add_action_entries([action_quit]);
-```
-
-### Accelerators
-
-Keyboard shortcuts are set via `set_accels_for_action()`:
-
-```rust
-self.set_accels_for_action("app.quit", &["<Control>q"]);
-self.set_accels_for_action("window.close", &["<Control>w"]);
-```
-
-## CSS Styling
-
-CSS is loaded via `GtkCssProvider`:
-
-```rust
-fn setup_css(&self) {
-    let provider = gtk::CssProvider::new();
-    provider.load_from_resource("/com/example/myapp/style.css");
-    if let Some(display) = gdk::Display::default() {
-        gtk::style_context_add_provider_for_display(
-            &display,
-            &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
-    }
-}
-```
-
-## Internationalization
-
-Translations use `gettextrs`:
-
-```rust
-use gettextrs::gettext;
-
-// Mark strings for translation
-let label = gettext("Hello world!");
-```
-
-Translation files (.po) are compiled to .mo files in `data/locale/`.
-
-## Build System
-
-### Meson Integration
-
-Meson builds the project and generates:
-- `gresource.xml` - GTK resource bundle manifest
-- `config.rs` - Build variables injected at compile time
-- Compiled translations (.mo files)
-
-### Resource Compilation
-
-UI files and CSS are compiled into a GTK resource bundle:
-- Binary XML is embedded in the binary
-- No external UI files needed at runtime
-
-## Extension Points
-
-To extend the application:
-
-1. **Add new windows** - Create new window.rs module + UI file
-2. **Add actions** - Add `gio::ActionEntry` in application.rs
-3. **Add accelerators** - Add in `setup_accels()`
-4. **Add CSS** - Extend style.css
-5. **Add resources** - Add to meson.build
-
-## Key Dependencies
-
-| Package | Purpose |
-|---------|----------|
-| gtk | GTK4 bindings |
-| gio | GIO library |
-| glib | GLib bindings |
-| gettextrs | Internationalization |
-| tracing | Logging |
-| tracing-subscriber | Logging output |
-
-## Runtime Flow
-
-```
-main()
-  ├── Initialize tracing logger
-  ├── Load translations (gettextrs)
-  ├── Load GTK resources
-  ├── Create Application instance
-  └── Application::run()
-      └── GtkApplication::activate()
-          ├── Create main window
-          └── Present window
-```
+`flowchart` is pure Rust and holds all parsing, serialization and layout logic, so it is covered by plain `cargo test`. The GTK modules depend on it, never the other way around.
 
 ## Data Flow
 
+```mermaid
+flowchart LR
+    Text[Source view] -- "debounced parse" --> Canvas
+    Canvas -- "changed: serialize" --> Text
+    Palette -- "click / drag" --> Canvas
+    Inspector -- "edit()" --> Canvas
+    Canvas -- "selection-changed" --> Inspector
 ```
-User Input
-    │
-    ▼
-GTK Event (signal)
-    │
-    ├── Action (gio::Action)
-    │   └── Handler closure
-    │
-    └── Subclass method
-        └── Update model
-            │
-            ▼
-        Notify property change
-            │
-            ▼
-        Widget emits signal
-            │
-            ▼
-        UI updates via binding
-```
+
+- The canvas owns the current `Flowchart`. Every user edit goes through `Canvas::edit`, which records an undo snapshot and emits `changed`.
+- The window turns `changed` into Mermaid text. While it rewrites the buffer it sets a `syncing` flag so the change is not parsed back.
+- Text edits are parsed 300 ms after the last keystroke. A valid result replaces the canvas chart (`Canvas::set_chart`), keeping current positions of nodes the text does not position. A parse error is shown in a banner and the canvas is left alone.
+- Canvas signals: `changed` (user edit), `selection-changed`, `history-changed` (undo/redo availability).
+
+## Canvas Interaction
+
+| Gesture | Effect |
+|---|---|
+| Drag node | Move (snapped to a 10 px grid) |
+| Drag from a node handle, or Shift+drag a node | Create a link to the node under the pointer on release |
+| Drag empty space / middle-drag / scroll | Pan |
+| Ctrl+scroll | Zoom around the pointer |
+| Double-click node or link | Edit label inline |
+| Double-click empty space | Add a rectangle and edit its label |
+| Drop a palette tile | Add that shape at the drop point |
+| Delete, F2, Ctrl+Z, Ctrl+Shift+Z, Escape | Delete, rename, undo, redo, clear selection |
+
+Edges between the same pair of nodes are bent apart. An edge whose straight path crosses another node is rerouted as an arc on the first side that clears all nodes.
+
+## File Format
+
+Files are plain Mermaid. Manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). Statements the model does not cover (`classDef`, `class`, `style`, `linkStyle`, `click`, comments) are kept verbatim. `subgraph` is rejected with a parse error.
+
+## Decisions
+
+- [ADR 0001: Native canvas with own Mermaid parser](adr/0001-native-canvas-with-own-mermaid-parser.md)
+- [ADR 0002: Store node positions in Mermaid comments](adr/0002-store-node-positions-in-mermaid-comments.md)
