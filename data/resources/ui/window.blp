@@ -97,9 +97,19 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
           resize-end-child: false;
 
           start-child: Overlay {
-            child: $MermanCanvas canvas {
+            child: Stack editor_stack {
               hexpand: true;
               vexpand: true;
+
+              StackPage {
+                name: "flowchart";
+                child: $MermanFlowchartCanvas flowchart_canvas {};
+              }
+
+              StackPage {
+                name: "sequence";
+                child: $MermanSequenceCanvas sequence_canvas {};
+              }
             };
 
             [overlay]
@@ -142,8 +152,18 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
             shrink-end-child: false;
             visible: bind panel_toggle.active;
 
-            start-child: $MermanInspector inspector {
+            start-child: Stack inspector_stack {
               height-request: 220;
+
+              StackPage {
+                name: "flowchart";
+                child: $MermanFlowchartInspector flowchart_inspector {};
+              }
+
+              StackPage {
+                name: "sequence";
+                child: $MermanSequenceInspector sequence_inspector {};
+              }
             };
 
             end-child: Box {
@@ -166,8 +186,13 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
 menu primary_menu {
   section {
     item {
-      label: _("_New Diagram");
-      action: "win.new";
+      label: _("New _Flowchart");
+      action: "win.new-flowchart";
+    }
+
+    item {
+      label: _("New _Sequence Diagram");
+      action: "win.new-sequence";
     }
 
     item {

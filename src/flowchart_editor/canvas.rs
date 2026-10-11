@@ -1,9 +1,5 @@
-//! Interactive diagram canvas: renders a [`Flowchart`] and edits it through
+//! Interactive flowchart canvas: renders a [`Flowchart`] and edits it through
 //! direct manipulation (move, connect, drop, inline label editing).
-
-mod geometry;
-mod history;
-mod render;
 
 use std::cell::{Cell, OnceCell, RefCell};
 use std::collections::HashMap;
@@ -13,21 +9,18 @@ use std::sync::OnceLock;
 use gtk::glib::subclass::Signal;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gdk, glib, graphene, pango};
+use gtk::{gdk, glib};
 
-use self::history::History;
-use self::render::Colors;
+use super::geometry;
+use super::render;
+use crate::drawing::{self, Colors, log_draw_error};
 use crate::flowchart::model::RenameError;
 use crate::flowchart::{self, Direction, Flowchart, Node, NodeShape, Point};
+use crate::geometry::Rect;
+use crate::history::History;
+use crate::interaction::{InlineEditor, Navigable, install_navigation};
+use crate::viewport::Viewport;
 
-pub use self::geometry::{Rect, shape_size};
-pub use self::render::shape_path;
-
-const MIN_ZOOM: f64 = 0.2;
-const MAX_ZOOM: f64 = 4.0;
-const ZOOM_STEP: f64 = 1.2;
-const SCROLL_STEP: f64 = 30.0;
-const MAX_LABEL_WIDTH: i32 = 200;
 /// Screen-space radius of connection handles and their hit area.
 const PORT_RADIUS: f64 = 5.0;
 const PORT_HIT_RADIUS: f64 = 10.0;
@@ -36,7 +29,6 @@ const PARALLEL_EDGE_SPACING: f64 = 24.0;
 /// Detour offsets tried, in order, to route an edge around nodes in its way.
 const DETOUR_OFFSETS: [f64; 6] = [50.0, -50.0, 90.0, -90.0, 150.0, -150.0];
 const SNAP: f64 = 10.0;
-const FIT_MARGIN: f64 = 40.0;
 
 /// Canvas operation bound to a keyboard shortcut.
 type CanvasAction = fn(&Canvas);
@@ -69,42 +61,23 @@ enum Drag {
 mod imp {
     use super::*;
 
-    #[derive(Debug)]
+    #[derive(Debug, Default)]
     pub struct Canvas {
         pub chart: RefCell<Flowchart>,
         pub selection: RefCell<Option<Selection>>,
         pub hovered: RefCell<Option<String>>,
-        pub zoom: Cell<f64>,
-        pub offset: Cell<(f64, f64)>,
+        pub viewport: Cell<Viewport>,
         pub pointer: Cell<(f64, f64)>,
         pub fit_pending: Cell<bool>,
         pub(super) drag: RefCell<Drag>,
         pub history: RefCell<History<Flowchart>>,
-        pub editor: OnceCell<(gtk::Popover, gtk::Entry)>,
+        pub editor: OnceCell<InlineEditor>,
         pub editing: RefCell<Option<Selection>>,
-    }
-
-    impl Default for Canvas {
-        fn default() -> Self {
-            Self {
-                chart: RefCell::default(),
-                selection: RefCell::default(),
-                hovered: RefCell::default(),
-                zoom: Cell::new(1.0),
-                offset: Cell::new((0.0, 0.0)),
-                pointer: Cell::new((0.0, 0.0)),
-                fit_pending: Cell::new(false),
-                drag: RefCell::default(),
-                history: RefCell::default(),
-                editor: OnceCell::new(),
-                editing: RefCell::default(),
-            }
-        }
     }
 
     #[glib::object_subclass]
     impl ObjectSubclass for Canvas {
-        const NAME: &'static str = "MermanCanvas";
+        const NAME: &'static str = "MermanFlowchartCanvas";
         type Type = super::Canvas;
         type ParentType = gtk::Widget;
 
@@ -135,6 +108,7 @@ mod imp {
             obj.set_overflow(gtk::Overflow::Hidden);
             obj.add_css_class("view");
             obj.setup_controllers();
+            install_navigation(&*obj);
             obj.setup_editor();
             adw::StyleManager::default().connect_dark_notify(glib::clone!(
                 #[weak]
@@ -144,8 +118,8 @@ mod imp {
         }
 
         fn dispose(&self) {
-            if let Some((popover, _)) = self.editor.get() {
-                popover.unparent();
+            if let Some(editor) = self.editor.get() {
+                editor.unparent();
             }
         }
     }
@@ -157,8 +131,8 @@ mod imp {
 
         fn size_allocate(&self, width: i32, height: i32, baseline: i32) {
             self.parent_size_allocate(width, height, baseline);
-            if let Some((popover, _)) = self.editor.get() {
-                popover.present();
+            if let Some(editor) = self.editor.get() {
+                editor.present();
             }
             if self.fit_pending.get() && width > 0 && height > 0 {
                 self.fit_pending.set(false);
@@ -181,6 +155,20 @@ glib::wrapper! {
 impl Default for Canvas {
     fn default() -> Self {
         glib::Object::new()
+    }
+}
+
+impl Navigable for Canvas {
+    fn viewport(&self) -> &Cell<Viewport> {
+        &self.imp().viewport
+    }
+
+    fn pointer(&self) -> &Cell<(f64, f64)> {
+        &self.imp().pointer
+    }
+
+    fn fit_pending(&self) -> &Cell<bool> {
+        &self.imp().fit_pending
     }
 }
 
@@ -292,7 +280,8 @@ impl Canvas {
     /// Adds a node in the middle of the viewport, stepping aside from nodes
     /// already sitting there.
     pub fn add_node_at_center(&self, shape: NodeShape) {
-        let mut at = self.to_world(self.width() as f64 / 2.0, self.height() as f64 / 2.0);
+        let (w, h) = self.widget_size();
+        let mut at = self.viewport().get().to_world(w / 2.0, h / 2.0);
         while self.with_chart(|c| {
             c.nodes.iter().any(|n| {
                 n.pos
@@ -332,26 +321,7 @@ impl Canvas {
         self.fit_to_content();
     }
 
-    pub fn zoom_in(&self) {
-        self.zoom_around(self.viewport_center(), ZOOM_STEP);
-    }
-
-    pub fn zoom_out(&self) {
-        self.zoom_around(self.viewport_center(), 1.0 / ZOOM_STEP);
-    }
-
-    pub fn reset_zoom(&self) {
-        let zoom = self.imp().zoom.get();
-        self.zoom_around(self.viewport_center(), 1.0 / zoom);
-    }
-
     pub fn fit_to_content(&self) {
-        let imp = self.imp();
-        let (w, h) = (self.width() as f64, self.height() as f64);
-        if w <= 0.0 || h <= 0.0 {
-            imp.fit_pending.set(true);
-            return;
-        }
         let bounds = self.with_chart(|chart| {
             chart
                 .nodes
@@ -359,54 +329,21 @@ impl Canvas {
                 .filter_map(|n| self.node_rect(n))
                 .reduce(|a, b| a.union(&b))
         });
-        let Some(bounds) = bounds.map(|b| b.inflate(FIT_MARGIN)) else {
-            imp.zoom.set(1.0);
-            imp.offset.set((0.0, 0.0));
-            self.queue_draw();
-            return;
-        };
-        let zoom = (w / bounds.w).min(h / bounds.h).clamp(MIN_ZOOM, 1.0);
-        let c = bounds.center();
-        imp.zoom.set(zoom);
-        imp.offset.set((w / 2.0 - c.x * zoom, h / 2.0 - c.y * zoom));
-        self.queue_draw();
+        self.fit_bounds(bounds);
     }
 
-    // ----- Coordinates and hit testing --------------------------------------
+    // ----- Geometry and hit testing -----------------------------------------
 
     fn to_world(&self, x: f64, y: f64) -> Point {
-        let imp = self.imp();
-        let zoom = imp.zoom.get();
-        let (ox, oy) = imp.offset.get();
-        Point::new((x - ox) / zoom, (y - oy) / zoom)
+        self.viewport().get().to_world(x, y)
     }
 
-    fn to_screen(&self, p: Point) -> (f64, f64) {
-        let imp = self.imp();
-        let zoom = imp.zoom.get();
-        let (ox, oy) = imp.offset.get();
-        (p.x * zoom + ox, p.y * zoom + oy)
-    }
-
-    fn viewport_center(&self) -> (f64, f64) {
-        (self.width() as f64 / 2.0, self.height() as f64 / 2.0)
-    }
-
-    fn label_layout(&self, text: &str) -> pango::Layout {
-        let layout = self.create_pango_layout(Some(text));
-        layout.set_width(MAX_LABEL_WIDTH * pango::SCALE);
-        layout.set_wrap(pango::WrapMode::WordChar);
-        layout.set_alignment(pango::Alignment::Center);
-        layout
-    }
-
-    fn text_size(&self, text: &str) -> (f64, f64) {
-        let (_, logical) = self.label_layout(text).pixel_extents();
-        (logical.width() as f64, logical.height() as f64)
+    fn zoom(&self) -> f64 {
+        self.viewport().get().zoom
     }
 
     fn node_size(&self, node: &Node) -> (f64, f64) {
-        geometry::shape_size(node.shape, self.text_size(&node.label))
+        geometry::shape_size(node.shape, drawing::text_size(self, &node.label))
     }
 
     fn node_rect(&self, node: &Node) -> Option<Rect> {
@@ -425,7 +362,7 @@ impl Canvas {
     }
 
     fn edge_at(&self, p: Point) -> Option<usize> {
-        let tolerance = EDGE_HIT_DISTANCE / self.imp().zoom.get();
+        let tolerance = EDGE_HIT_DISTANCE / self.zoom();
         self.with_chart(|chart| {
             self.edge_paths(chart)
                 .iter()
@@ -441,7 +378,7 @@ impl Canvas {
     /// hovered and the selected node.
     fn port_at(&self, p: Point) -> Option<String> {
         let imp = self.imp();
-        let radius = PORT_HIT_RADIUS / imp.zoom.get();
+        let radius = PORT_HIT_RADIUS / self.zoom();
         let selected = match &*imp.selection.borrow() {
             Some(Selection::Node(id)) => Some(id.clone()),
             _ => None,
@@ -520,12 +457,10 @@ impl Canvas {
 
     // ----- Rendering --------------------------------------------------------
 
-    /// Draws all geometry into a single cairo layer, then the labels on top.
     fn draw(&self, snapshot: &gtk::Snapshot) {
         let imp = self.imp();
-        let (w, h) = (self.width() as f64, self.height() as f64);
-        let zoom = imp.zoom.get();
-        let (ox, oy) = imp.offset.get();
+        let viewport = self.viewport().get();
+        let zoom = viewport.zoom;
         let colors = Colors::new(self.color(), adw::StyleManager::default().is_dark());
         let chart = imp.chart.borrow();
         let selection = imp.selection.borrow().clone();
@@ -537,7 +472,12 @@ impl Canvas {
             .iter()
             .zip(&paths)
             .filter(|(e, path)| !e.label.is_empty() && !path.is_empty())
-            .map(|(e, path)| (self.label_layout(&e.label), geometry::path_midpoint(path)))
+            .map(|(e, path)| {
+                (
+                    drawing::label_layout(self, &e.label),
+                    geometry::path_midpoint(path),
+                )
+            })
             .collect();
         let nodes: Vec<_> = chart
             .nodes
@@ -549,29 +489,18 @@ impl Canvas {
             _ => None,
         };
 
-        let cr = snapshot.append_cairo(&graphene::Rect::new(0.0, 0.0, w as f32, h as f32));
-        cr.translate(ox, oy);
-        cr.scale(zoom, zoom);
-
-        let top_left = self.to_world(0.0, 0.0);
-        let visible = Rect {
-            x: top_left.x,
-            y: top_left.y,
-            w: w / zoom,
-            h: h / zoom,
-        };
-        render::draw_grid(&cr, &visible, zoom, &colors);
+        let cr = drawing::world_context(snapshot, &viewport, self.widget_size());
+        drawing::draw_grid(&cr, &viewport.visible(self.widget_size()), zoom, &colors);
 
         for (i, (edge, path)) in chart.edges.iter().zip(&paths).enumerate() {
             let selected = selection == Some(Selection::Edge(i));
             log_draw_error(render::draw_edge(&cr, edge, path, &colors, selected));
         }
         for (layout, at) in &edge_labels {
-            let (_, logical) = layout.pixel_extents();
-            let size = (logical.width() as f64 + 8.0, logical.height() as f64 + 4.0);
-            log_draw_error(render::draw_label_background(
+            let (w, h) = drawing::layout_size(layout);
+            log_draw_error(drawing::draw_label_background(
                 &cr,
-                &Rect::centered(*at, size),
+                &Rect::centered(*at, (w + 8.0, h + 4.0)),
                 &colors,
             ));
         }
@@ -625,37 +554,17 @@ impl Canvas {
         drop(cr);
 
         for (layout, at) in &edge_labels {
-            self.draw_text(snapshot, layout, *at, &colors.fg);
+            drawing::draw_text(snapshot, &viewport, layout, *at, &colors.fg);
         }
         for (node, rect) in &nodes {
-            self.draw_text(
+            drawing::draw_text(
                 snapshot,
-                &self.label_layout(&node.label),
+                &viewport,
+                &drawing::label_layout(self, &node.label),
                 rect.center(),
                 &colors.fg,
             );
         }
-    }
-
-    fn draw_text(
-        &self,
-        snapshot: &gtk::Snapshot,
-        layout: &pango::Layout,
-        center: Point,
-        color: &gdk::RGBA,
-    ) {
-        let zoom = self.imp().zoom.get() as f32;
-        let (sx, sy) = self.to_screen(center);
-        let (_, logical) = layout.pixel_extents();
-        snapshot.save();
-        snapshot.translate(&graphene::Point::new(sx as f32, sy as f32));
-        snapshot.scale(zoom, zoom);
-        snapshot.translate(&graphene::Point::new(
-            -(logical.x() as f32 + logical.width() as f32 / 2.0),
-            -(logical.y() as f32 + logical.height() as f32 / 2.0),
-        ));
-        snapshot.append_layout(layout, color);
-        snapshot.restore();
     }
 
     // ----- Interaction ------------------------------------------------------
@@ -680,29 +589,6 @@ impl Canvas {
             move |_, _, _| canvas.on_drag_end()
         ));
         self.add_controller(drag);
-
-        let pan = gtk::GestureDrag::builder()
-            .button(gdk::BUTTON_MIDDLE)
-            .build();
-        pan.connect_drag_begin(glib::clone!(
-            #[weak(rename_to = canvas)]
-            self,
-            move |_, _, _| {
-                let origin = canvas.imp().offset.get();
-                canvas.imp().drag.replace(Drag::Pan { origin });
-            }
-        ));
-        pan.connect_drag_update(glib::clone!(
-            #[weak(rename_to = canvas)]
-            self,
-            move |gesture, dx, dy| canvas.on_drag_update(gesture, dx, dy)
-        ));
-        pan.connect_drag_end(glib::clone!(
-            #[weak(rename_to = canvas)]
-            self,
-            move |_, _, _| canvas.on_drag_end()
-        ));
-        self.add_controller(pan);
 
         let click = gtk::GestureClick::builder()
             .button(gdk::BUTTON_PRIMARY)
@@ -735,19 +621,6 @@ impl Canvas {
         ));
         self.add_controller(motion);
 
-        let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::BOTH_AXES);
-        scroll.connect_scroll(glib::clone!(
-            #[weak(rename_to = canvas)]
-            self,
-            #[upgrade_or]
-            glib::Propagation::Proceed,
-            move |controller, dx, dy| {
-                canvas.on_scroll(controller, dx, dy);
-                glib::Propagation::Stop
-            }
-        ));
-        self.add_controller(scroll);
-
         let drop = gtk::DropTarget::new(String::static_type(), gdk::DragAction::COPY);
         drop.connect_drop(glib::clone!(
             #[weak(rename_to = canvas)]
@@ -775,12 +648,11 @@ impl Canvas {
             ("<Control>z", Canvas::undo),
             ("<Control><Shift>z|<Control>y", Canvas::redo),
             ("Escape", |c| c.select(None)),
-            (
-                "<Control>plus|<Control>equal|<Control>KP_Add",
-                Canvas::zoom_in,
-            ),
-            ("<Control>minus|<Control>KP_Subtract", Canvas::zoom_out),
-            ("<Control>0", Canvas::reset_zoom),
+            ("<Control>plus|<Control>equal|<Control>KP_Add", |c| {
+                c.zoom_in()
+            }),
+            ("<Control>minus|<Control>KP_Subtract", |c| c.zoom_out()),
+            ("<Control>0", |c| c.reset_zoom()),
             ("F2", Canvas::edit_selected_label),
         ];
         for (trigger, handler) in bindings {
@@ -831,7 +703,7 @@ impl Canvas {
         } else {
             self.select(None);
             Drag::Pan {
-                origin: imp.offset.get(),
+                origin: self.viewport().get().offset,
             }
         };
         imp.drag.replace(drag);
@@ -840,10 +712,13 @@ impl Canvas {
 
     fn on_drag_update(&self, gesture: &gtk::GestureDrag, dx: f64, dy: f64) {
         let imp = self.imp();
-        let zoom = imp.zoom.get();
+        let zoom = self.zoom();
         match &mut *imp.drag.borrow_mut() {
             Drag::None => return,
-            Drag::Pan { origin } => imp.offset.set((origin.0 + dx, origin.1 + dy)),
+            Drag::Pan { origin } => {
+                let origin = *origin;
+                self.update_viewport(|v| v.offset = (origin.0 + dx, origin.1 + dy));
+            }
             Drag::Move {
                 id, origin, moved, ..
             } => {
@@ -900,7 +775,6 @@ impl Canvas {
 
     fn on_motion(&self, x: f64, y: f64) {
         let imp = self.imp();
-        imp.pointer.set((x, y));
         if !matches!(*imp.drag.borrow(), Drag::None) {
             return;
         }
@@ -922,53 +796,26 @@ impl Canvas {
         }
     }
 
-    fn on_scroll(&self, controller: &gtk::EventControllerScroll, dx: f64, dy: f64) {
-        let imp = self.imp();
-        if controller
-            .current_event_state()
-            .contains(gdk::ModifierType::CONTROL_MASK)
-        {
-            let factor = if dy < 0.0 { ZOOM_STEP } else { 1.0 / ZOOM_STEP };
-            self.zoom_around(imp.pointer.get(), factor);
-        } else {
-            let (ox, oy) = imp.offset.get();
-            imp.offset
-                .set((ox - dx * SCROLL_STEP, oy - dy * SCROLL_STEP));
-            self.queue_draw();
-        }
-    }
-
-    fn zoom_around(&self, (x, y): (f64, f64), factor: f64) {
-        let imp = self.imp();
-        let anchor = self.to_world(x, y);
-        let zoom = (imp.zoom.get() * factor).clamp(MIN_ZOOM, MAX_ZOOM);
-        imp.zoom.set(zoom);
-        imp.offset.set((x - anchor.x * zoom, y - anchor.y * zoom));
-        self.queue_draw();
-    }
-
     // ----- Inline label editing ---------------------------------------------
 
     fn setup_editor(&self) {
-        let entry = gtk::Entry::builder().width_chars(18).build();
-        let popover = gtk::Popover::builder().child(&entry).build();
-        popover.set_parent(self);
-        entry.connect_activate(glib::clone!(
+        let commit = glib::clone!(
             #[weak(rename_to = canvas)]
             self,
-            move |entry| {
-                canvas.commit_label_edit(&entry.text());
-            }
-        ));
-        popover.connect_closed(glib::clone!(
+            move |text: &str| canvas.commit_label_edit(text)
+        );
+        let closed = glib::clone!(
             #[weak(rename_to = canvas)]
             self,
-            move |_| {
+            move || {
                 canvas.imp().editing.take();
                 canvas.grab_focus();
             }
-        ));
-        let _ = self.imp().editor.set((popover, entry));
+        );
+        let _ = self
+            .imp()
+            .editor
+            .set(InlineEditor::new(self, commit, closed));
     }
 
     fn edit_selected_label(&self) {
@@ -978,9 +825,6 @@ impl Canvas {
     }
 
     fn start_label_edit(&self, target: Selection) {
-        let Some((popover, entry)) = self.imp().editor.get() else {
-            return;
-        };
         let found = self.with_chart(|chart| match &target {
             Selection::Node(id) => chart
                 .node(id)
@@ -991,38 +835,30 @@ impl Canvas {
                 Some((label, geometry::path_midpoint(&path)))
             }
         });
-        let Some((label, anchor)) = found else {
+        let (Some((label, anchor)), Some(editor)) = (found, self.imp().editor.get()) else {
             return;
         };
         self.select(Some(target.clone()));
         self.imp().editing.replace(Some(target));
-        let (sx, sy) = self.to_screen(anchor);
-        popover.set_pointing_to(Some(&gdk::Rectangle::new(sx as i32, sy as i32, 1, 1)));
-        entry.set_text(&label);
-        popover.popup();
-        entry.grab_focus();
-        entry.select_region(0, -1);
+        editor.open(self.viewport().get().to_screen(anchor), &label);
     }
 
     fn commit_label_edit(&self, text: &str) {
-        let imp = self.imp();
-        if let Some(target) = imp.editing.take() {
-            self.edit(|chart| match target {
-                Selection::Node(id) => {
-                    if let Some(node) = chart.node_mut(&id) {
-                        node.label = text.to_string();
-                    }
+        let Some(target) = self.imp().editing.take() else {
+            return;
+        };
+        self.edit(|chart| match target {
+            Selection::Node(id) => {
+                if let Some(node) = chart.node_mut(&id) {
+                    node.label = text.to_string();
                 }
-                Selection::Edge(i) => {
-                    if let Some(edge) = chart.edges.get_mut(i) {
-                        edge.label = text.to_string();
-                    }
+            }
+            Selection::Edge(i) => {
+                if let Some(edge) = chart.edges.get_mut(i) {
+                    edge.label = text.to_string();
                 }
-            });
-        }
-        if let Some((popover, _)) = imp.editor.get() {
-            popover.popdown();
-        }
+            }
+        });
     }
 
     // ----- Internal helpers -------------------------------------------------
@@ -1066,10 +902,4 @@ impl Canvas {
 
 fn snap(p: Point) -> Point {
     Point::new((p.x / SNAP).round() * SNAP, (p.y / SNAP).round() * SNAP)
-}
-
-fn log_draw_error(result: Result<(), gtk::cairo::Error>) {
-    if let Err(err) = result {
-        tracing::warn!(error = %err, "failed to draw diagram element");
-    }
 }

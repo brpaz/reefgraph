@@ -8,7 +8,8 @@ use gtk::prelude::*;
 
 use adw::prelude::*;
 
-use crate::canvas::{Canvas, Selection};
+use super::canvas::{Canvas, Selection};
+use crate::combo::{index_of, string_list};
 use crate::flowchart::{Direction, Edge, Head, Node, NodeShape, Stroke};
 use crate::labels;
 
@@ -16,7 +17,7 @@ mod imp {
     use super::*;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/dev/brunopaz/Merman/ui/inspector.ui")]
+    #[template(resource = "/dev/brunopaz/Merman/ui/flowchart-inspector.ui")]
     pub struct Inspector {
         #[template_child]
         pub stack: TemplateChild<gtk::Stack>,
@@ -52,7 +53,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for Inspector {
-        const NAME: &'static str = "MermanInspector";
+        const NAME: &'static str = "MermanFlowchartInspector";
         type Type = super::Inspector;
         type ParentType = adw::Bin;
 
@@ -80,15 +81,6 @@ glib::wrapper! {
     pub struct Inspector(ObjectSubclass<imp::Inspector>)
         @extends gtk::Widget, adw::Bin,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
-}
-
-fn string_list(items: impl IntoIterator<Item = String>) -> gtk::StringList {
-    let items: Vec<String> = items.into_iter().collect();
-    gtk::StringList::new(&items.iter().map(String::as_str).collect::<Vec<_>>())
-}
-
-fn index_of<T: PartialEq>(all: &[T], value: &T) -> u32 {
-    all.iter().position(|v| v == value).unwrap_or(0) as u32
 }
 
 impl Inspector {

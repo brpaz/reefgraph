@@ -102,7 +102,7 @@ impl MermanApplication {
     fn setup_accels(&self) {
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("window.close", &["<Control>w"]);
-        self.set_accels_for_action("win.new", &["<Control>n"]);
+        self.set_accels_for_action("win.new-flowchart", &["<Control>n"]);
         self.set_accels_for_action("win.open", &["<Control>o"]);
         self.set_accels_for_action("win.save", &["<Control>s"]);
         self.set_accels_for_action("win.save-as", &["<Control><Shift>s"]);

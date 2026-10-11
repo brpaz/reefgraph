@@ -1,10 +1,20 @@
 mod application;
-mod canvas;
+mod combo;
 mod config;
+mod diagram;
+mod drawing;
 mod flowchart;
-mod inspector;
+mod flowchart_editor;
+mod geometry;
+mod history;
+mod ids;
+mod interaction;
 mod labels;
 mod palette;
+mod sequence;
+mod sequence_editor;
+mod syntax;
+mod viewport;
 mod window;
 
 use std::path::PathBuf;

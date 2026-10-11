@@ -1,71 +1,16 @@
 //! Cairo drawing of shapes and edges, in canvas (world) coordinates.
 
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::f64::consts::PI;
 
-use gtk::{cairo, gdk};
+use gtk::cairo;
 
-use super::geometry::Rect;
+use crate::drawing::{Colors, rounded_rect, set_color};
 use crate::flowchart::{Edge, Head, NodeShape, Point, Stroke};
+use crate::geometry::Rect;
 
 const ARROW_LENGTH: f64 = 10.0;
 const ARROW_HALF_WIDTH: f64 = 5.0;
 const MARKER_RADIUS: f64 = 4.0;
-const GRID_SPACING: f64 = 20.0;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Colors {
-    pub fg: gdk::RGBA,
-    pub node_fill: gdk::RGBA,
-    pub accent: gdk::RGBA,
-    pub grid: gdk::RGBA,
-}
-
-impl Colors {
-    pub fn new(fg: gdk::RGBA, dark: bool) -> Self {
-        let (node_fill, accent) = if dark {
-            (rgb(0x30, 0x30, 0x34), rgb(0x78, 0xae, 0xed))
-        } else {
-            (rgb(0xfa, 0xfa, 0xfb), rgb(0x1c, 0x71, 0xd8))
-        };
-        Self {
-            fg,
-            node_fill,
-            accent,
-            grid: fg.with_alpha(0.15),
-        }
-    }
-}
-
-fn rgb(r: u8, g: u8, b: u8) -> gdk::RGBA {
-    gdk::RGBA::new(r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0)
-}
-
-fn set_color(cr: &cairo::Context, c: &gdk::RGBA) {
-    cr.set_source_rgba(
-        c.red() as f64,
-        c.green() as f64,
-        c.blue() as f64,
-        c.alpha() as f64,
-    );
-}
-
-pub fn draw_grid(cr: &cairo::Context, visible: &Rect, zoom: f64, colors: &Colors) {
-    if GRID_SPACING * zoom < 8.0 {
-        return;
-    }
-    set_color(cr, &colors.grid);
-    let radius = 1.0 / zoom;
-    let mut x = (visible.x / GRID_SPACING).floor() * GRID_SPACING;
-    while x <= visible.x + visible.w {
-        let mut y = (visible.y / GRID_SPACING).floor() * GRID_SPACING;
-        while y <= visible.y + visible.h {
-            cr.rectangle(x - radius / 2.0, y - radius / 2.0, radius, radius);
-            y += GRID_SPACING;
-        }
-        x += GRID_SPACING;
-    }
-    let _ = cr.fill();
-}
 
 pub fn draw_node(
     cr: &cairo::Context,
@@ -223,17 +168,6 @@ fn polygon(cr: &cairo::Context, points: &[(f64, f64)]) {
     cr.close_path();
 }
 
-fn rounded_rect(cr: &cairo::Context, rect: &Rect, radius: f64) {
-    let Rect { x, y, w, h } = *rect;
-    let r = radius.min(w / 2.0).min(h / 2.0);
-    cr.new_sub_path();
-    cr.arc(x + w - r, y + r, r, -FRAC_PI_2, 0.0);
-    cr.arc(x + w - r, y + h - r, r, 0.0, FRAC_PI_2);
-    cr.arc(x + r, y + h - r, r, FRAC_PI_2, PI);
-    cr.arc(x + r, y + r, r, PI, 3.0 * FRAC_PI_2);
-    cr.close_path();
-}
-
 fn ellipse(cr: &cairo::Context, c: Point, rx: f64, ry: f64) -> Result<(), cairo::Error> {
     cr.new_sub_path();
     elliptic_arc(cr, c, rx, ry, 0.0, 2.0 * PI, false)?;
@@ -372,16 +306,6 @@ fn draw_head(
     Ok(())
 }
 
-pub fn draw_label_background(
-    cr: &cairo::Context,
-    rect: &Rect,
-    colors: &Colors,
-) -> Result<(), cairo::Error> {
-    rounded_rect(cr, rect, 4.0);
-    set_color(cr, &colors.node_fill);
-    cr.fill()
-}
-
 pub fn draw_ports(
     cr: &cairo::Context,
     ports: &[Point],
@@ -419,6 +343,7 @@ pub fn draw_rubber_band(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gtk::gdk;
 
     fn painted_pixels(shape: NodeShape) -> usize {
         let mut surface = cairo::ImageSurface::create(cairo::Format::ARgb32, 120, 80).unwrap();

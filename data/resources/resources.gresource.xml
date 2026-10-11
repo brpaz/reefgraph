@@ -5,7 +5,8 @@
     <file compressed="true" preprocess="xml-stripblanks" alias="gtk/help-overlay.ui">ui/shortcuts.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/window.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/palette.ui</file>
-    <file compressed="true" preprocess="xml-stripblanks">ui/inspector.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/flowchart-inspector.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/sequence-inspector.ui</file>
     <file compressed="true">style.css</file>
   </gresource>
 </gresources>

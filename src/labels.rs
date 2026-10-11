@@ -3,6 +3,7 @@
 use gettextrs::gettext;
 
 use crate::flowchart::{Direction, Head, NodeShape, Stroke};
+use crate::sequence::{ArrowHead, BlockKind, LineStyle, NotePlacement, ParticipantKind};
 
 pub fn shape(shape: NodeShape) -> String {
     gettext(match shape {
@@ -46,5 +47,48 @@ pub fn head(head: Head) -> String {
         Head::Arrow => "Arrow",
         Head::Circle => "Circle",
         Head::Cross => "Cross",
+    })
+}
+
+pub fn participant_kind(kind: ParticipantKind) -> String {
+    gettext(match kind {
+        ParticipantKind::Participant => "Participant",
+        ParticipantKind::Actor => "Actor",
+    })
+}
+
+pub fn line_style(line: LineStyle) -> String {
+    gettext(match line {
+        LineStyle::Solid => "Solid",
+        LineStyle::Dotted => "Dotted",
+    })
+}
+
+pub fn arrow_head(head: ArrowHead) -> String {
+    gettext(match head {
+        ArrowHead::None => "None",
+        ArrowHead::Filled => "Arrow",
+        ArrowHead::Cross => "Cross",
+        ArrowHead::Open => "Open Arrow (async)",
+    })
+}
+
+pub fn note_placement(placement: NotePlacement) -> String {
+    gettext(match placement {
+        NotePlacement::LeftOf => "Left of",
+        NotePlacement::RightOf => "Right of",
+        NotePlacement::Over => "Over",
+    })
+}
+
+pub fn block_kind(kind: BlockKind) -> String {
+    gettext(match kind {
+        BlockKind::Loop => "Loop",
+        BlockKind::Alt => "Alternative",
+        BlockKind::Opt => "Optional",
+        BlockKind::Par => "Parallel",
+        BlockKind::Critical => "Critical Region",
+        BlockKind::Break => "Break",
+        BlockKind::Rect => "Highlight",
     })
 }

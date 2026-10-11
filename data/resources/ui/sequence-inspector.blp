@@ -1,0 +1,260 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MermanSequenceInspector: Adw.Bin {
+  child: Stack stack {
+    transition-type: crossfade;
+    vhomogeneous: false;
+
+    StackPage {
+      name: "diagram";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Sequence Diagram");
+          description: _("Drag from one lifeline to another to add a message. Drag participants sideways and rows up or down to reorder them.");
+
+          Adw.EntryRow title_row {
+            title: _("Title");
+            show-apply-button: true;
+          }
+
+          Adw.SwitchRow autonumber_row {
+            title: _("Number Messages");
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "participant";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Participant");
+
+          Adw.EntryRow participant_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow participant_id_row {
+            title: _("Id");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow participant_kind_row {
+            title: _("Kind");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_participant_button {
+            label: _("Delete Participant");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "message";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Message");
+
+          Adw.EntryRow message_text_row {
+            title: _("Text");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow message_from_row {
+            title: _("From");
+          }
+
+          Adw.ComboRow message_to_row {
+            title: _("To");
+          }
+
+          Adw.ComboRow message_line_row {
+            title: _("Line");
+          }
+
+          Adw.ComboRow message_head_row {
+            title: _("Arrow");
+          }
+
+          Adw.SwitchRow message_activate_row {
+            title: _("Activate Receiver");
+          }
+
+          Adw.SwitchRow message_deactivate_row {
+            title: _("Deactivate Sender");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_message_button {
+            label: _("Delete Message");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "note";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Note");
+
+          Adw.EntryRow note_text_row {
+            title: _("Text");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow note_placement_row {
+            title: _("Placement");
+          }
+
+          Adw.ComboRow note_participant_row {
+            title: _("Participant");
+          }
+
+          Adw.ComboRow note_span_row {
+            title: _("Span To");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_note_button {
+            label: _("Delete Note");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "block";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Block");
+
+          Adw.ComboRow block_kind_row {
+            title: _("Kind");
+          }
+
+          Adw.EntryRow block_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.ActionRow block_branch_row {
+            title: _("Add Branch");
+            activatable-widget: add_branch_button;
+
+            [suffix]
+            Button add_branch_button {
+              icon-name: "list-add-symbolic";
+              tooltip-text: _("Add Branch");
+              valign: center;
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_block_button {
+            label: _("Remove Block");
+            tooltip-text: _("Remove the block and keep its contents");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "branch";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Branch");
+
+          Adw.EntryRow branch_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_branch_button {
+            label: _("Remove Branch");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "activation";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Activation");
+
+          Adw.ComboRow activation_participant_row {
+            title: _("Participant");
+          }
+
+          Adw.SwitchRow activation_start_row {
+            title: _("Starts Activation");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_activation_button {
+            label: _("Delete");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+  };
+}

@@ -1,26 +1,12 @@
 //! Parser for the subset of Mermaid flowchart syntax the editor models.
 
-use std::fmt;
-
 use super::model::{Direction, Edge, Flowchart, Head, NodeShape, Point, Stroke};
+use crate::ids::is_id_char;
+pub use crate::syntax::ParseError;
+use crate::syntax::{split_source, split_statements};
 
 /// Prefix of the comment lines that store manual node positions.
 pub const POSITION_META: &str = "@merman pos";
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParseError {
-    /// 1-based line number.
-    pub line: usize,
-    pub message: String,
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Line {}: {}", self.line, self.message)
-    }
-}
-
-impl std::error::Error for ParseError {}
 
 /// Statements kept verbatim without being modelled.
 const PASSTHROUGH_KEYWORDS: &[&str] = &["classDef", "class", "style", "linkStyle", "click"];
@@ -46,60 +32,31 @@ const SHAPES: &[(&str, &str, NodeShape)] = &[
 ];
 
 pub fn parse(src: &str) -> Result<Flowchart, ParseError> {
-    let mut chart = Flowchart::default();
+    let source = split_source(src)?;
+    let mut chart = Flowchart {
+        preamble: source.preamble,
+        ..Flowchart::default()
+    };
+    let (header_line, header) = source.header;
+    let mut header_statements = split_statements(header).into_iter();
+    chart.direction = parse_header(header_statements.next().unwrap_or_default())
+        .map_err(|m| ParseError::new(header_line, m))?;
+    for statement in header_statements {
+        parse_statement(statement, &mut chart).map_err(|m| ParseError::new(header_line, m))?;
+    }
+
     let mut positions = Vec::new();
-    let mut header_seen = false;
-    let mut in_front_matter = false;
-
-    for (idx, raw) in src.lines().enumerate() {
-        let line_no = idx + 1;
-        let line = raw.trim();
-        let error = |message: String| ParseError {
-            line: line_no,
-            message,
-        };
-
-        if !header_seen && (in_front_matter || (idx == 0 && line == "---")) {
-            chart.preamble.push(raw.to_string());
-            in_front_matter = idx == 0 || line != "---";
-            continue;
-        }
-        if line.is_empty() {
-            continue;
-        }
+    for (line_no, line) in source.body {
         if let Some(comment) = line.strip_prefix("%%") {
-            if let Some(meta) = comment.trim_start().strip_prefix(POSITION_META) {
-                positions.extend(parse_position(meta));
-            } else if header_seen {
-                chart.passthrough.push(line.to_string());
-            } else {
-                chart.preamble.push(line.to_string());
+            match comment.trim_start().strip_prefix(POSITION_META) {
+                Some(meta) => positions.extend(parse_position(meta)),
+                None => chart.passthrough.push(line.to_string()),
             }
             continue;
         }
-
-        let mut statements = split_statements(line).into_iter();
-        if !header_seen {
-            let header = statements.next().unwrap_or_default();
-            chart.direction = parse_header(header).map_err(error)?;
-            header_seen = true;
+        for statement in split_statements(line) {
+            parse_statement(statement, &mut chart).map_err(|m| ParseError::new(line_no, m))?;
         }
-        for statement in statements {
-            parse_statement(statement, &mut chart).map_err(error)?;
-        }
-    }
-
-    if in_front_matter {
-        return Err(ParseError {
-            line: 1,
-            message: "Front matter is missing its closing `---`".into(),
-        });
-    }
-    if !header_seen {
-        return Err(ParseError {
-            line: 1,
-            message: "Expected a `flowchart` or `graph` declaration".into(),
-        });
     }
 
     for (id, pos) in positions {
@@ -141,26 +98,6 @@ fn parse_header(header: &str) -> Result<Direction, String> {
         ));
     }
     Ok(direction)
-}
-
-/// Splits a line on `;` separators that are outside quoted strings.
-fn split_statements(line: &str) -> Vec<&str> {
-    let mut statements = Vec::new();
-    let mut in_quote = false;
-    let mut start = 0;
-    for (i, c) in line.char_indices() {
-        match c {
-            '"' => in_quote = !in_quote,
-            ';' if !in_quote => {
-                statements.push(line[start..i].trim());
-                start = i + 1;
-            }
-            _ => {}
-        }
-    }
-    statements.push(line[start..].trim());
-    statements.retain(|s| !s.is_empty());
-    statements
 }
 
 fn parse_statement(statement: &str, chart: &mut Flowchart) -> Result<(), String> {
@@ -210,10 +147,6 @@ fn parse_node_group(cursor: &mut Cursor, chart: &mut Flowchart) -> Result<Vec<St
             return Ok(ids);
         }
     }
-}
-
-fn is_id_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || c == '_'
 }
 
 fn parse_node(cursor: &mut Cursor, chart: &mut Flowchart) -> Result<String, String> {

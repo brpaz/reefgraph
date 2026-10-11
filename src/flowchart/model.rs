@@ -1,4 +1,7 @@
-use std::fmt;
+pub use crate::geometry::Point;
+pub use crate::ids::RenameError;
+
+use crate::ids;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Direction {
@@ -144,18 +147,6 @@ impl Head {
     pub const ALL: [Head; 4] = [Head::None, Head::Arrow, Head::Circle, Head::Cross];
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-}
-
-impl Point {
-    pub fn new(x: f64, y: f64) -> Self {
-        Self { x, y }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node {
     pub id: String,
@@ -190,23 +181,6 @@ pub struct Edge {
     pub end: Head,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RenameError {
-    Invalid,
-    Taken,
-}
-
-impl fmt::Display for RenameError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            RenameError::Invalid => f.write_str("ids may only contain letters, digits and `_`"),
-            RenameError::Taken => f.write_str("another node already uses this id"),
-        }
-    }
-}
-
-impl std::error::Error for RenameError {}
-
 /// Words Mermaid treats as keywords, which break the diagram when used as node ids.
 const RESERVED_IDS: &[&str] = &["end", "graph", "flowchart", "subgraph", "style", "class"];
 
@@ -224,9 +198,7 @@ pub struct Flowchart {
 
 impl Flowchart {
     pub fn is_valid_id(id: &str) -> bool {
-        !id.is_empty()
-            && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-            && !RESERVED_IDS.contains(&id)
+        ids::is_valid_id(id, RESERVED_IDS)
     }
 
     pub fn node(&self, id: &str) -> Option<&Node> {
@@ -251,11 +223,7 @@ impl Flowchart {
 
     /// First free id in the sequence `A`..`Z`, `N1`, `N2`…
     pub fn next_id(&self) -> String {
-        ('A'..='Z')
-            .map(String::from)
-            .chain((1..).map(|i| format!("N{i}")))
-            .find(|id| self.node(id).is_none())
-            .expect("id sequence is infinite")
+        ids::next_free_id(|id| self.node(id).is_some())
     }
 
     pub fn add_node(&mut self, shape: NodeShape, pos: Point) -> String {
