@@ -166,3 +166,37 @@ pub fn circle(cr: &cairo::Context, c: Point, r: f64) {
     cr.new_sub_path();
     cr.arc(c.x, c.y, r, 0.0, 2.0 * PI);
 }
+
+pub fn draw_ports(
+    cr: &cairo::Context,
+    ports: &[Point],
+    radius: f64,
+    colors: &Colors,
+) -> Result<(), cairo::Error> {
+    for p in ports {
+        cr.new_sub_path();
+        cr.arc(p.x, p.y, radius, 0.0, 2.0 * PI);
+    }
+    set_color(cr, &colors.node_fill);
+    cr.fill_preserve()?;
+    set_color(cr, &colors.accent);
+    cr.set_line_width(radius / 3.0);
+    cr.stroke()
+}
+
+pub fn draw_rubber_band(
+    cr: &cairo::Context,
+    from: Point,
+    to: Point,
+    zoom: f64,
+    colors: &Colors,
+) -> Result<(), cairo::Error> {
+    set_color(cr, &colors.accent);
+    cr.set_line_width(2.0 / zoom);
+    cr.set_dash(&[6.0 / zoom, 4.0 / zoom], 0.0);
+    cr.move_to(from.x, from.y);
+    cr.line_to(to.x, to.y);
+    cr.stroke()?;
+    cr.set_dash(&[], 0.0);
+    Ok(())
+}

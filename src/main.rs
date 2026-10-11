@@ -3,6 +3,8 @@ mod combo;
 mod config;
 mod diagram;
 mod drawing;
+mod erd;
+mod erd_editor;
 mod flowchart;
 mod flowchart_editor;
 mod geometry;

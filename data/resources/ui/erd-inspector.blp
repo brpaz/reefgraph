@@ -1,0 +1,147 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MermanErdInspector: Adw.Bin {
+  child: Stack stack {
+    transition-type: crossfade;
+    vhomogeneous: false;
+
+    StackPage {
+      name: "diagram";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Entity Relationship Diagram");
+          description: _("Drag from an entity's handles to relate it to another. Double-click an attribute to edit it as text, for example: int id PK \"comment\".");
+
+          Adw.ComboRow direction_row {
+            title: _("Direction");
+          }
+
+          Adw.ActionRow {
+            title: _("Auto Layout");
+            subtitle: _("Discard manual positions");
+            activatable-widget: layout_button;
+
+            [suffix]
+            Button layout_button {
+              label: _("Arrange");
+              valign: center;
+            }
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "entity";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Entity");
+
+          Adw.EntryRow entity_name_row {
+            title: _("Name");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow entity_label_row {
+            title: _("Display Name");
+            show-apply-button: true;
+          }
+        }
+
+        Adw.PreferencesGroup attributes_group {
+          title: _("Attributes");
+          description: _("type name [PK, FK, UK] [\"comment\"]");
+
+          header-suffix: Button add_attribute_button {
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Add Attribute");
+            valign: center;
+
+            styles [
+              "flat",
+            ]
+          };
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_entity_button {
+            label: _("Delete Entity");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "relationship";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Relationship");
+
+          Adw.EntryRow relationship_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow relationship_from_row {
+            title: _("From");
+          }
+
+          Adw.ComboRow relationship_from_cardinality_row {
+            title: _("From Cardinality");
+          }
+
+          Adw.ComboRow relationship_to_row {
+            title: _("To");
+          }
+
+          Adw.ComboRow relationship_to_cardinality_row {
+            title: _("To Cardinality");
+          }
+
+          Adw.SwitchRow relationship_identifying_row {
+            title: _("Identifying");
+            subtitle: _("Drawn as a solid line");
+          }
+
+          Adw.ActionRow {
+            title: _("Reverse Direction");
+            activatable-widget: reverse_button;
+
+            [suffix]
+            Button reverse_button {
+              icon-name: "object-flip-horizontal-symbolic";
+              tooltip-text: _("Reverse Direction");
+              valign: center;
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_relationship_button {
+            label: _("Delete Relationship");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+  };
+}

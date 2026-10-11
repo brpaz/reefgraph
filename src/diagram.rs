@@ -1,18 +1,20 @@
 //! Diagram types the editor supports, detected from the source declaration.
 
 use crate::syntax::{ParseError, split_source};
-use crate::{flowchart, sequence};
+use crate::{erd, flowchart, sequence};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Diagram {
     Flowchart(flowchart::Flowchart),
     Sequence(sequence::Sequence),
+    Erd(erd::Erd),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DiagramKind {
     Flowchart,
     Sequence,
+    Erd,
 }
 
 impl DiagramKind {
@@ -21,6 +23,7 @@ impl DiagramKind {
         match self {
             DiagramKind::Flowchart => "flowchart TD\n",
             DiagramKind::Sequence => "sequenceDiagram\n",
+            DiagramKind::Erd => "erDiagram\n",
         }
     }
 }
@@ -30,9 +33,12 @@ pub fn parse(src: &str) -> Result<Diagram, ParseError> {
     match source.keyword() {
         "flowchart" | "graph" => flowchart::parse(src).map(Diagram::Flowchart),
         sequence::parser::KEYWORD => sequence::parse(src).map(Diagram::Sequence),
+        erd::parser::KEYWORD => erd::parse(src).map(Diagram::Erd),
         other => Err(ParseError::new(
             source.header.0,
-            format!("`{other}` diagrams are not supported; use `flowchart` or `sequenceDiagram`"),
+            format!(
+                "`{other}` diagrams are not supported; use `flowchart`, `sequenceDiagram` or `erDiagram`"
+            ),
         )),
     }
 }
@@ -42,6 +48,7 @@ impl Diagram {
         match self {
             Diagram::Flowchart(_) => DiagramKind::Flowchart,
             Diagram::Sequence(_) => DiagramKind::Sequence,
+            Diagram::Erd(_) => DiagramKind::Erd,
         }
     }
 }
@@ -67,7 +74,11 @@ mod tests {
 
     #[test]
     fn templates_parse() {
-        for kind in [DiagramKind::Flowchart, DiagramKind::Sequence] {
+        for kind in [
+            DiagramKind::Flowchart,
+            DiagramKind::Sequence,
+            DiagramKind::Erd,
+        ] {
             assert_eq!(parse(kind.template()).unwrap().kind(), kind);
         }
     }

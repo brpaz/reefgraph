@@ -27,6 +27,8 @@ const PORT_RADIUS: f64 = 5.0;
 const PORT_HIT_RADIUS: f64 = 10.0;
 const EDGE_HIT_DISTANCE: f64 = 6.0;
 const SNAP: f64 = 10.0;
+/// Pointer travel before a press on an element starts moving it.
+const DRAG_THRESHOLD: f64 = 4.0;
 
 /// Canvas operation bound to a keyboard shortcut.
 type CanvasAction = fn(&Canvas);
@@ -481,7 +483,7 @@ impl Canvas {
         match &*drag {
             Drag::Connect { from, cursor } => {
                 if let Some(rect) = chart.node(from).and_then(|n| self.node_rect(n)) {
-                    log_draw_error(render::draw_rubber_band(
+                    log_draw_error(drawing::draw_rubber_band(
                         &cr,
                         rect.center(),
                         *cursor,
@@ -500,7 +502,7 @@ impl Canvas {
                     .flatten()
                 {
                     if let Some(rect) = chart.node(&id).and_then(|n| self.node_rect(n)) {
-                        log_draw_error(render::draw_ports(
+                        log_draw_error(drawing::draw_ports(
                             &cr,
                             &rect.ports(),
                             PORT_RADIUS / zoom,
@@ -682,9 +684,13 @@ impl Canvas {
             Drag::Move {
                 id, origin, moved, ..
             } => {
+                // Ignore jitter so a plain click does not move or snap the element.
+                if !*moved && dx.hypot(dy) < DRAG_THRESHOLD {
+                    return;
+                }
                 let pos = snap(Point::new(origin.x + dx / zoom, origin.y + dy / zoom));
                 if let Some(node) = imp.chart.borrow_mut().node_mut(id) {
-                    *moved |= node.pos != Some(pos);
+                    *moved = true;
                     node.pos = Some(pos);
                 }
             }

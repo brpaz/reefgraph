@@ -2,6 +2,7 @@
 
 use gettextrs::gettext;
 
+use crate::erd::Cardinality;
 use crate::flowchart::{Direction, Head, NodeShape, Stroke};
 use crate::sequence::{ArrowHead, BlockKind, LineStyle, NotePlacement, ParticipantKind};
 
@@ -90,5 +91,14 @@ pub fn block_kind(kind: BlockKind) -> String {
         BlockKind::Critical => "Critical Region",
         BlockKind::Break => "Break",
         BlockKind::Rect => "Highlight",
+    })
+}
+
+pub fn cardinality(cardinality: Cardinality) -> String {
+    gettext(match cardinality {
+        Cardinality::ZeroOrOne => "Zero or one",
+        Cardinality::ExactlyOne => "Exactly one",
+        Cardinality::ZeroOrMore => "Zero or more",
+        Cardinality::OneOrMore => "One or more",
     })
 }

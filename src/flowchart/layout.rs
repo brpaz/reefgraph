@@ -20,7 +20,13 @@ pub fn layout_missing(chart: &mut Flowchart, size_of: impl Fn(&Node) -> (f64, f6
         .collect();
     let sizes: Vec<_> = chart.nodes.iter().map(&size_of).collect();
     let mut positions: Vec<_> = chart.nodes.iter().map(|n| n.pos).collect();
-    layered::fill_missing(&mut positions, &sizes, &edges, chart.direction);
+    layered::fill_missing(
+        &mut positions,
+        &sizes,
+        &edges,
+        chart.direction,
+        layered::Spacing::default(),
+    );
     for (node, pos) in chart.nodes.iter_mut().zip(positions) {
         node.pos = pos;
     }

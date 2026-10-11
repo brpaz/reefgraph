@@ -110,6 +110,11 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
                 name: "sequence";
                 child: $MermanSequenceCanvas sequence_canvas {};
               }
+
+              StackPage {
+                name: "erd";
+                child: $MermanErdCanvas erd_canvas {};
+              }
             };
 
             [overlay]
@@ -164,6 +169,11 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
                 name: "sequence";
                 child: $MermanSequenceInspector sequence_inspector {};
               }
+
+              StackPage {
+                name: "erd";
+                child: $MermanErdInspector erd_inspector {};
+              }
             };
 
             end-child: Box {
@@ -193,6 +203,11 @@ menu primary_menu {
     item {
       label: _("New _Sequence Diagram");
       action: "win.new-sequence";
+    }
+
+    item {
+      label: _("New _Entity Relationship Diagram");
+      action: "win.new-erd";
     }
 
     item {

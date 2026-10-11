@@ -3,11 +3,25 @@
 
 use crate::geometry::Point;
 
-const RANK_GAP: f64 = 70.0;
-const NODE_GAP: f64 = 40.0;
 const ORDERING_SWEEPS: usize = 4;
 /// Top-left margin of a laid out diagram.
 const MARGIN: f64 = 40.0;
+
+/// Gaps between consecutive ranks and between nodes within a rank.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Spacing {
+    pub rank: f64,
+    pub node: f64,
+}
+
+impl Default for Spacing {
+    fn default() -> Self {
+        Self {
+            rank: 70.0,
+            node: 40.0,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Direction {
@@ -54,11 +68,12 @@ pub fn fill_missing(
     sizes: &[(f64, f64)],
     edges: &[(usize, usize)],
     direction: Direction,
+    spacing: Spacing,
 ) {
     if positions.iter().all(Option::is_some) {
         return;
     }
-    let computed = layout(sizes, edges, direction);
+    let computed = layout(sizes, edges, direction, spacing);
     let placed: Vec<_> = positions
         .iter()
         .zip(&computed)
@@ -79,7 +94,12 @@ pub fn fill_missing(
 }
 
 /// Node centers for a fresh layout, indexed like `sizes`.
-pub fn layout(sizes: &[(f64, f64)], edges: &[(usize, usize)], direction: Direction) -> Vec<Point> {
+pub fn layout(
+    sizes: &[(f64, f64)],
+    edges: &[(usize, usize)],
+    direction: Direction,
+    spacing: Spacing,
+) -> Vec<Point> {
     let n = sizes.len();
     if n == 0 {
         return Vec::new();
@@ -105,13 +125,13 @@ pub fn layout(sizes: &[(f64, f64)], edges: &[(usize, usize)], direction: Directi
     for layer in &layers {
         let depth = layer.iter().map(|&v| extents[v].1).fold(0.0, f64::max);
         let total: f64 = layer.iter().map(|&v| extents[v].0).sum::<f64>()
-            + NODE_GAP * (layer.len().saturating_sub(1)) as f64;
+            + spacing.node * (layer.len().saturating_sub(1)) as f64;
         let mut cross = -total / 2.0;
         for &v in layer {
             centers[v] = (cross + extents[v].0 / 2.0, main + depth / 2.0);
-            cross += extents[v].0 + NODE_GAP;
+            cross += extents[v].0 + spacing.node;
         }
-        main += depth + RANK_GAP;
+        main += depth + spacing.rank;
     }
 
     let mut points: Vec<Point> = centers
@@ -270,13 +290,13 @@ mod tests {
     #[test]
     fn ranks_follow_edges_in_each_direction() {
         let sizes = [SIZE; 2];
-        let p = layout(&sizes, &[(0, 1)], Direction::TopBottom);
+        let p = layout(&sizes, &[(0, 1)], Direction::TopBottom, Spacing::default());
         assert!(p[1].y > p[0].y && p[1].x == p[0].x);
-        let p = layout(&sizes, &[(0, 1)], Direction::BottomTop);
+        let p = layout(&sizes, &[(0, 1)], Direction::BottomTop, Spacing::default());
         assert!(p[1].y < p[0].y);
-        let p = layout(&sizes, &[(0, 1)], Direction::LeftRight);
+        let p = layout(&sizes, &[(0, 1)], Direction::LeftRight, Spacing::default());
         assert!(p[1].x > p[0].x && p[1].y == p[0].y);
-        let p = layout(&sizes, &[(0, 1)], Direction::RightLeft);
+        let p = layout(&sizes, &[(0, 1)], Direction::RightLeft, Spacing::default());
         assert!(p[1].x < p[0].x);
     }
 
@@ -287,6 +307,7 @@ mod tests {
             &sizes,
             &[(0, 1), (1, 2), (2, 0), (1, 1), (0, 9)],
             Direction::TopBottom,
+            Spacing::default(),
         );
         assert!(p[0].y < p[1].y && p[1].y < p[2].y);
     }
@@ -294,7 +315,12 @@ mod tests {
     #[test]
     fn keeps_layout_inside_margin() {
         let sizes = [SIZE; 4];
-        for p in layout(&sizes, &[(0, 1), (0, 2), (0, 3)], Direction::RightLeft) {
+        for p in layout(
+            &sizes,
+            &[(0, 1), (0, 2), (0, 3)],
+            Direction::RightLeft,
+            Spacing::default(),
+        ) {
             assert!(p.x - SIZE.0 / 2.0 >= MARGIN - 1e-9 && p.y - SIZE.1 / 2.0 >= MARGIN - 1e-9);
         }
     }
@@ -302,7 +328,13 @@ mod tests {
     #[test]
     fn fills_only_missing_positions_next_to_placed_ones() {
         let mut positions = [Some(Point::new(500.0, 500.0)), None];
-        fill_missing(&mut positions, &[SIZE; 2], &[(0, 1)], Direction::TopBottom);
+        fill_missing(
+            &mut positions,
+            &[SIZE; 2],
+            &[(0, 1)],
+            Direction::TopBottom,
+            Spacing::default(),
+        );
         assert_eq!(positions[0], Some(Point::new(500.0, 500.0)));
         let b = positions[1].unwrap();
         assert_eq!(b.x, 500.0);
