@@ -8,6 +8,7 @@ mod diagram;
 mod drawing;
 mod erd;
 mod erd_editor;
+mod export;
 mod flowchart;
 mod flowchart_editor;
 mod geometry;

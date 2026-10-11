@@ -22,6 +22,7 @@
 - All flowchart node shapes, solid/dotted/thick links, arrow/circle/cross heads, link labels
 - Automatic layered layout; manual positions are saved as Mermaid comments, so files stay valid Mermaid
 - Copy the Mermaid source without editor metadata, ready to paste into Markdown
+- Export diagrams as SVG or PNG images
 - Undo/redo, zoom and pan, keyboard shortcuts
 
 ## Install

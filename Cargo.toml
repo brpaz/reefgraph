@@ -7,6 +7,7 @@ edition = "2024"
 lto = true
 
 [dependencies]
+cairo-rs = { version = "0.22", features = ["png", "svg", "v1_16"] }
 gettext-rs = { version = "0.7", features = ["gettext-system"] }
 adw = { version = "0.9", package = "libadwaita", features = ["v1_5"] }
 gtk = { version = "0.11", package = "gtk4", features = ["v4_14"] }

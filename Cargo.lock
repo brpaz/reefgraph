@@ -538,6 +538,7 @@ dependencies = [
 name = "merman"
 version = "0.0.0"
 dependencies = [
+ "cairo-rs",
  "gettext-rs",
  "gtk4",
  "libadwaita",

@@ -58,6 +58,16 @@ impl Rect {
         }
     }
 
+    /// Smallest rectangle containing `self` and `p`.
+    pub fn include(&self, p: Point) -> Self {
+        self.union(&Rect {
+            x: p.x,
+            y: p.y,
+            w: 0.0,
+            h: 0.0,
+        })
+    }
+
     /// Connection handles at the middle of each side: top, right, bottom, left.
     pub fn ports(&self) -> [Point; 4] {
         let c = self.center();

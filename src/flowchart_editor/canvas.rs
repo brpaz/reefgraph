@@ -13,7 +13,8 @@ use gtk::{gdk, glib};
 
 use super::geometry;
 use super::render;
-use crate::drawing::{self, Colors, log_draw_error};
+use crate::drawing::{self, log_draw_error};
+use crate::export::{self, Exportable, Scene};
 use crate::flowchart::model::RenameError;
 use crate::flowchart::{self, Direction, Flowchart, Node, NodeShape, Point};
 use crate::geometry::Rect;
@@ -354,14 +355,7 @@ impl Canvas {
     }
 
     pub fn fit_to_content(&self) {
-        let bounds = self.with_chart(|chart| {
-            chart
-                .nodes
-                .iter()
-                .filter_map(|n| self.node_rect(n))
-                .reduce(|a, b| a.union(&b))
-        });
-        self.fit_bounds(bounds);
+        self.fit_bounds(self.content_bounds());
     }
 
     // ----- Geometry and hit testing -----------------------------------------
@@ -452,113 +446,8 @@ impl Canvas {
     // ----- Rendering --------------------------------------------------------
 
     fn draw(&self, snapshot: &gtk::Snapshot) {
-        let imp = self.imp();
-        let viewport = self.viewport().get();
-        let zoom = viewport.zoom;
-        let colors = Colors::new(self.color(), adw::StyleManager::default().is_dark());
-        let chart = imp.chart.borrow();
-        let selection = imp.selection.borrow().clone();
-        let drag = imp.drag.borrow();
-
-        let paths = self.edge_paths(&chart);
-        let edge_labels: Vec<_> = chart
-            .edges
-            .iter()
-            .zip(&paths)
-            .filter(|(e, path)| !e.label.is_empty() && !path.is_empty())
-            .map(|(e, path)| {
-                (
-                    drawing::label_layout(self, &e.label),
-                    routing::path_midpoint(path),
-                )
-            })
-            .collect();
-        let nodes: Vec<_> = chart
-            .nodes
-            .iter()
-            .filter_map(|node| Some((node, self.node_rect(node)?)))
-            .collect();
-        let connect_target = match &*drag {
-            Drag::Connect { cursor, .. } => self.node_at(*cursor),
-            _ => None,
-        };
-
-        let cr = drawing::world_context(snapshot, &viewport, self.widget_size());
-        drawing::draw_grid(&cr, &viewport.visible(self.widget_size()), zoom, &colors);
-
-        for (i, (edge, path)) in chart.edges.iter().zip(&paths).enumerate() {
-            let selected = selection == Some(Selection::Edge(i));
-            log_draw_error(render::draw_edge(&cr, edge, path, &colors, selected));
-        }
-        for (layout, at) in &edge_labels {
-            let (w, h) = drawing::layout_size(layout);
-            log_draw_error(drawing::draw_label_background(
-                &cr,
-                &Rect::centered(*at, (w + 8.0, h + 4.0)),
-                &colors,
-            ));
-        }
-
-        for (node, rect) in &nodes {
-            let highlighted = selection == Some(Selection::Node(node.id.clone()))
-                || connect_target.as_deref() == Some(node.id.as_str());
-            log_draw_error(render::draw_node(
-                &cr,
-                node.shape,
-                rect,
-                &colors,
-                highlighted,
-            ));
-        }
-
-        // Interaction overlay: connection handles and the edge being dragged.
-        match &*drag {
-            Drag::Connect { from, cursor } => {
-                if let Some(rect) = chart.node(from).and_then(|n| self.node_rect(n)) {
-                    log_draw_error(drawing::draw_rubber_band(
-                        &cr,
-                        rect.center(),
-                        *cursor,
-                        zoom,
-                        &colors,
-                    ));
-                }
-            }
-            Drag::None => {
-                let selected = match &selection {
-                    Some(Selection::Node(id)) => Some(id.clone()),
-                    _ => None,
-                };
-                for id in [imp.hovered.borrow().clone(), selected]
-                    .into_iter()
-                    .flatten()
-                {
-                    if let Some(rect) = chart.node(&id).and_then(|n| self.node_rect(n)) {
-                        log_draw_error(drawing::draw_ports(
-                            &cr,
-                            &rect.ports(),
-                            PORT_RADIUS / zoom,
-                            &colors,
-                        ));
-                    }
-                }
-            }
-            _ => {}
-        }
-        drop(cr);
-
-        for (layout, at) in &edge_labels {
-            drawing::draw_text(snapshot, &viewport, layout, *at, &colors.fg);
-        }
-        for (node, rect) in &nodes {
-            drawing::draw_text(
-                snapshot,
-                &viewport,
-                &drawing::label_layout(self, &node.label),
-                rect.center(),
-                &colors.fg,
-            );
-        }
+        let scene = export::screen_scene(self, self.viewport().get());
+        self.draw_scene(snapshot, &scene);
     }
 
     // ----- Interaction ------------------------------------------------------
@@ -897,6 +786,139 @@ impl Canvas {
         // Selection contents (labels, shapes) may have changed too.
         self.emit_by_name::<()>("selection-changed", &[]);
         self.queue_draw();
+    }
+}
+
+impl Exportable for Canvas {
+    fn content_bounds(&self) -> Option<Rect> {
+        self.with_chart(|chart| {
+            let nodes = chart
+                .nodes
+                .iter()
+                .filter_map(|n| self.node_rect(n))
+                .reduce(|a, b| a.union(&b))?;
+            Some(
+                self.edge_paths(chart)
+                    .iter()
+                    .flatten()
+                    .fold(nodes, |bounds, p| bounds.include(*p)),
+            )
+        })
+    }
+
+    fn draw_scene(&self, snapshot: &gtk::Snapshot, scene: &Scene) {
+        let imp = self.imp();
+        let viewport = scene.viewport;
+        let zoom = viewport.zoom;
+        let colors = &scene.colors;
+        let chart = imp.chart.borrow();
+        let selection = imp.selection.borrow().clone().filter(|_| scene.interactive);
+        let drag_state = imp.drag.borrow();
+        let drag = if scene.interactive {
+            &*drag_state
+        } else {
+            &Drag::None
+        };
+
+        let paths = self.edge_paths(&chart);
+        let edge_labels: Vec<_> = chart
+            .edges
+            .iter()
+            .zip(&paths)
+            .filter(|(e, path)| !e.label.is_empty() && !path.is_empty())
+            .map(|(e, path)| {
+                (
+                    drawing::label_layout(self, &e.label),
+                    routing::path_midpoint(path),
+                )
+            })
+            .collect();
+        let nodes: Vec<_> = chart
+            .nodes
+            .iter()
+            .filter_map(|node| Some((node, self.node_rect(node)?)))
+            .collect();
+        let connect_target = match drag {
+            Drag::Connect { cursor, .. } => self.node_at(*cursor),
+            _ => None,
+        };
+
+        let cr = drawing::world_context(snapshot, &viewport, scene.size);
+        if scene.interactive {
+            drawing::draw_grid(&cr, &viewport.visible(scene.size), zoom, colors);
+        }
+
+        for (i, (edge, path)) in chart.edges.iter().zip(&paths).enumerate() {
+            let selected = selection == Some(Selection::Edge(i));
+            log_draw_error(render::draw_edge(&cr, edge, path, colors, selected));
+        }
+        for (layout, at) in &edge_labels {
+            let (w, h) = drawing::layout_size(layout);
+            log_draw_error(drawing::draw_label_background(
+                &cr,
+                &Rect::centered(*at, (w + 8.0, h + 4.0)),
+                colors,
+            ));
+        }
+
+        for (node, rect) in &nodes {
+            let highlighted = selection == Some(Selection::Node(node.id.clone()))
+                || connect_target.as_deref() == Some(node.id.as_str());
+            log_draw_error(render::draw_node(
+                &cr,
+                node.shape,
+                rect,
+                colors,
+                highlighted,
+            ));
+        }
+
+        // Interaction overlay: connection handles and the edge being dragged.
+        match drag {
+            Drag::Connect { from, cursor } => {
+                if let Some(rect) = chart.node(from).and_then(|n| self.node_rect(n)) {
+                    log_draw_error(drawing::draw_rubber_band(
+                        &cr,
+                        rect.center(),
+                        *cursor,
+                        zoom,
+                        colors,
+                    ));
+                }
+            }
+            Drag::None => {
+                let selected = match &selection {
+                    Some(Selection::Node(id)) => Some(id.clone()),
+                    _ => None,
+                };
+                let hovered = imp.hovered.borrow().clone().filter(|_| scene.interactive);
+                for id in [hovered, selected].into_iter().flatten() {
+                    if let Some(rect) = chart.node(&id).and_then(|n| self.node_rect(n)) {
+                        log_draw_error(drawing::draw_ports(
+                            &cr,
+                            &rect.ports(),
+                            PORT_RADIUS / zoom,
+                            colors,
+                        ));
+                    }
+                }
+            }
+            _ => {}
+        }
+        drop(cr);
+
+        for (layout, at) in &edge_labels {
+            drawing::draw_text(snapshot, &viewport, layout, *at, &colors.fg);
+        }
+        for (node, rect) in &nodes {
+            drawing::draw_text(
+                snapshot,
+                &viewport,
+                &drawing::label_layout(self, &node.label),
+                rect.center(),
+                &colors.fg,
+            );
+        }
     }
 }
 

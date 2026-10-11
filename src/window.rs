@@ -11,6 +11,7 @@ use crate::application::MermanApplication;
 use crate::box_canvas::BoxCanvas;
 use crate::config::{APP_ID, PROFILE};
 use crate::diagram::{self, Diagram, DiagramKind};
+use crate::export::{self, ExportError, ImageFormat};
 use crate::flowchart::{self, NodeShape};
 use crate::interaction::Navigable;
 use crate::palette::Palette;
@@ -257,6 +258,12 @@ impl MermanApplicationWindow {
                     glib::spawn_future_local(async move {
                         win.save_as().await;
                     });
+                })
+                .build(),
+            gio::ActionEntry::builder("export-image")
+                .activate(|win: &Self, _, _| {
+                    let win = win.clone();
+                    glib::spawn_future_local(async move { win.export_image().await });
                 })
                 .build(),
             gio::ActionEntry::builder("copy-source")
@@ -748,6 +755,63 @@ impl MermanApplicationWindow {
         self.toast(&gettext("Mermaid source copied"));
     }
 
+    /// Asks for a file and exports the diagram there as SVG, or as PNG when
+    /// the file name ends in `.png`.
+    async fn export_image(&self) {
+        let imp = self.imp();
+        let stem = imp
+            .file
+            .borrow()
+            .as_ref()
+            .and_then(|f| f.path())
+            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().into_owned()))
+            .unwrap_or_else(|| gettext("diagram"));
+        let dialog = gtk::FileDialog::builder()
+            .title(gettext("Export Image"))
+            .modal(true)
+            .initial_name(format!("{stem}.svg"))
+            .filters(&image_filters())
+            .build();
+        let file = match dialog.save_future(Some(self)).await {
+            Ok(file) => file,
+            Err(err) => return log_dialog_error(&err),
+        };
+        let name = file
+            .basename()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        let format = ImageFormat::from_file_name(&name);
+        let image = match imp.kind.get() {
+            DiagramKind::Flowchart => export::render(&*imp.flowchart_canvas, format),
+            DiagramKind::Sequence => export::render(&*imp.sequence_canvas, format),
+            DiagramKind::Erd => export::render(&*imp.erd_canvas, format),
+            DiagramKind::Class => export::render(&*imp.class_canvas, format),
+        };
+        let image = match image {
+            Ok(image) => image,
+            Err(ExportError::Empty) => return self.toast(&gettext("The diagram is empty")),
+            Err(err) => {
+                tracing::error!(error = %err, "failed to render image");
+                return self.toast(&gettext("Could not export the image"));
+            }
+        };
+        let result = file
+            .replace_contents_future(
+                image,
+                None,
+                false,
+                gio::FileCreateFlags::REPLACE_DESTINATION,
+            )
+            .await;
+        match result {
+            Ok(_) => self.toast(&gettext("Image exported")),
+            Err((_, err)) => {
+                tracing::error!(error = %err, "failed to write image");
+                self.toast(&gettext("Could not export the image"));
+            }
+        }
+    }
+
     fn toast(&self, message: &str) {
         self.imp().toast_overlay.add_toast(adw::Toast::new(message));
     }
@@ -791,6 +855,19 @@ fn file_filters() -> gio::ListStore {
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&mermaid);
     filters.append(&all);
+    filters
+}
+
+fn image_filters() -> gio::ListStore {
+    let svg = gtk::FileFilter::new();
+    svg.set_name(Some(&gettext("SVG Images")));
+    svg.add_suffix("svg");
+    let png = gtk::FileFilter::new();
+    png.set_name(Some(&gettext("PNG Images")));
+    png.add_suffix("png");
+    let filters = gio::ListStore::new::<gtk::FileFilter>();
+    filters.append(&svg);
+    filters.append(&png);
     filters
 }
 

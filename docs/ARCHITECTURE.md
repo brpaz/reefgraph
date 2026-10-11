@@ -19,6 +19,7 @@ src/
 ├── routing.rs           # Edge paths: outline clipping, parallel bends, detours around nodes
 ├── drawing.rs           # Colors, label layout, text and Cairo helpers shared by the canvases
 ├── interaction.rs       # Navigable trait (scroll/zoom/pan), InlineEditor popover
+├── export.rs            # SVG/PNG export: Exportable trait, Scene, render to a Cairo surface
 ├── box_canvas.rs        # MermanBoxCanvas: shared canvas for box-and-link diagrams (BoxDiagram trait)
 ├── palette.rs           # MermanPalette: tiles supplied by the active editor
 ├── combo.rs, labels.rs  # Combo row models and translatable enum names
@@ -103,6 +104,10 @@ Same gestures as entity relationship diagrams: drag to move, drag from a handle 
 ### Blocks in sequence diagrams
 
 Blocks (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`) are stored as flat start/branch/end markers in the item list, so their extent changes by dragging the markers like any other row. `Sequence::validate` keeps them balanced.
+
+## Image Export
+
+**Export Image** (Ctrl+E) writes the current diagram as SVG, or as PNG when the chosen file name ends in `.png`. Each canvas implements `export::Exportable`: `content_bounds` (shapes plus edge routes, also used by zoom-to-fit) and `draw_scene`, which its `snapshot` calls too. A `Scene` carries the viewport, size, colors and whether to draw the grid, selection and drag feedback. Export draws a non-interactive scene in light colors on white into a `gtk::Snapshot` and replays the resulting render node onto a Cairo SVG or image surface, so on-screen and exported drawing cannot diverge; see [ADR 0004](adr/0004-export-by-replaying-the-canvas-scene.md). PNGs are rendered at 2× scale.
 
 ## File Format
 

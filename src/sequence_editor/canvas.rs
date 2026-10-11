@@ -13,7 +13,8 @@ use gtk::{gdk, glib};
 
 use super::render;
 use crate::drawing::{self, Colors, log_draw_error};
-use crate::geometry::Point;
+use crate::export::{self, Exportable, Scene};
+use crate::geometry::{Point, Rect};
 use crate::history::History;
 use crate::ids::RenameError;
 use crate::interaction::{InlineEditor, Navigable, install_navigation};
@@ -437,10 +438,7 @@ impl Canvas {
     }
 
     pub fn fit_to_content(&self) {
-        let bounds = self.with_sequence(|seq| {
-            (!seq.participants.is_empty()).then(|| self.layout_of(seq).bounds)
-        });
-        self.fit_bounds(bounds);
+        self.fit_bounds(self.content_bounds());
     }
 
     // ----- Geometry ---------------------------------------------------------
@@ -481,179 +479,8 @@ impl Canvas {
     // ----- Rendering --------------------------------------------------------
 
     fn draw(&self, snapshot: &gtk::Snapshot) {
-        let imp = self.imp();
-        let viewport = self.viewport().get();
-        let dark = adw::StyleManager::default().is_dark();
-        let colors = Colors::new(self.color(), dark);
-        let seq = imp.seq.borrow();
-        let layout = self.layout_of(&seq);
-        let selection = imp.selection.borrow().clone();
-        let selected_item = match &selection {
-            Some(Selection::Item(i)) => Some(*i),
-            _ => None,
-        };
-        let selected_participant = match &selection {
-            Some(Selection::Participant(id)) => seq.participant_index(id),
-            _ => None,
-        };
-        let selected_block = selected_item.and_then(|i| seq.block_markers(i));
-        let block_selected = |start: usize| selected_block.as_ref().is_some_and(|m| m[0] == start);
-        let mut texts: Vec<(String, Point, gtk::gdk::RGBA)> = Vec::new();
-
-        let cr = drawing::world_context(snapshot, &viewport, self.widget_size());
-        drawing::draw_grid(
-            &cr,
-            &viewport.visible(self.widget_size()),
-            viewport.zoom,
-            &colors,
-        );
-
-        if let (Some(title), Some(at)) = (&seq.title, layout.title) {
-            texts.push((title.clone(), at, colors.fg));
-        }
-
-        // Highlight blocks sit behind everything else.
-        for frame in layout.frames.iter().filter(|f| f.kind == BlockKind::Rect) {
-            let label = block_label(&seq, frame.start);
-            let color = gdk::RGBA::parse(label.trim()).ok();
-            log_draw_error(render::draw_highlight_block(
-                &cr,
-                &frame.rect,
-                color,
-                dark,
-                &colors,
-                block_selected(frame.start),
-            ));
-        }
-
-        for (i, column) in layout.columns.iter().enumerate() {
-            log_draw_error(render::draw_lifeline(
-                &cr,
-                column.center,
-                column.head.y + column.head.h,
-                column.foot.y,
-                &colors,
-                selected_participant == Some(i),
-            ));
-        }
-        for bar in &layout.activations {
-            log_draw_error(render::draw_activation(&cr, &bar.rect, &colors));
-        }
-
-        for frame in layout.frames.iter().filter(|f| f.kind != BlockKind::Rect) {
-            let keyword = frame.kind.keyword();
-            let (kw, _) = drawing::text_size(self, keyword);
-            let tab_width = kw + render::TAB_PADDING;
-            let branch_ys: Vec<f64> = frame.branches.iter().map(|b| b.1).collect();
-            log_draw_error(render::draw_frame(
-                &cr,
-                &frame.rect,
-                tab_width,
-                &branch_ys,
-                &colors,
-                block_selected(frame.start),
-            ));
-            let header_y = frame.rect.y + (layout::BLOCK_HEADER - 4.0) / 2.0;
-            texts.push((
-                keyword.to_string(),
-                Point::new(frame.rect.x + tab_width / 2.0 - 3.0, header_y),
-                colors.fg,
-            ));
-            let mut labels = vec![(block_label(&seq, frame.start), header_y, tab_width)];
-            labels.extend(
-                frame
-                    .branches
-                    .iter()
-                    .map(|(i, y)| (block_label(&seq, *i), y + layout::BLOCK_HEADER / 2.0, 0.0)),
-            );
-            for (label, y, indent) in labels.into_iter().filter(|l| !l.0.is_empty()) {
-                let text = format!("[{label}]");
-                let (w, _) = drawing::text_size(self, &text);
-                texts.push((
-                    text,
-                    Point::new(frame.rect.x + indent + 8.0 + w / 2.0, y),
-                    colors.fg,
-                ));
-            }
-        }
-
-        let note_fill = render::note_fill(dark);
-        for (i, (item, row)) in seq.items.iter().zip(&layout.rows).enumerate() {
-            let highlighted = selected_item == Some(i);
-            match (item, &row.shape) {
-                (
-                    Item::Message(m),
-                    RowShape::Message {
-                        y,
-                        x1,
-                        x2,
-                        self_loop,
-                        number,
-                        label,
-                    },
-                ) => {
-                    log_draw_error(render::draw_message(
-                        &cr,
-                        m.line,
-                        m.head,
-                        (*x1, *x2, *y),
-                        *self_loop,
-                        &colors,
-                        highlighted,
-                    ));
-                    if let Some(n) = number {
-                        let at = Point::new(*x1, *y);
-                        log_draw_error(render::draw_number_badge(&cr, at, &colors));
-                        texts.push((n.to_string(), at, gdk::RGBA::WHITE));
-                    }
-                    texts.push((m.text.clone(), *label, colors.fg));
-                }
-                (Item::Note(n), RowShape::Note(rect)) => {
-                    log_draw_error(render::draw_note(
-                        &cr,
-                        rect,
-                        &note_fill,
-                        &colors,
-                        highlighted,
-                    ));
-                    texts.push((n.text.clone(), rect.center(), colors.fg));
-                }
-                (Item::Activate(_) | Item::Deactivate(_), RowShape::Activation { y, x }) => {
-                    log_draw_error(render::draw_activation_marker(
-                        &cr,
-                        Point::new(*x, *y),
-                        &colors,
-                        highlighted,
-                    ));
-                }
-                _ => {}
-            }
-        }
-
-        for (i, (p, column)) in seq.participants.iter().zip(&layout.columns).enumerate() {
-            for rect in [&column.head, &column.foot] {
-                log_draw_error(render::draw_participant(
-                    &cr,
-                    p.kind,
-                    rect,
-                    &colors,
-                    selected_participant == Some(i),
-                ));
-                texts.push((
-                    p.label.clone(),
-                    render::participant_label_center(p.kind, rect),
-                    colors.fg,
-                ));
-            }
-        }
-
-        self.draw_drag_feedback(&cr, &layout, &colors, viewport.zoom);
-        drop(cr);
-
-        for (text, at, color) in texts.iter().filter(|t| !t.0.is_empty()) {
-            let text_layout = drawing::label_layout(self, text);
-            drawing::draw_text(snapshot, &viewport, &text_layout, *at, color);
-        }
+        let scene = export::screen_scene(self, self.viewport().get());
+        self.draw_scene(snapshot, &scene);
     }
 
     fn draw_drag_feedback(
@@ -1094,5 +921,186 @@ fn block_label(seq: &Sequence, index: usize) -> String {
     match seq.items.get(index) {
         Some(Item::BlockStart { label, .. } | Item::BlockBranch { label }) => label.clone(),
         _ => String::new(),
+    }
+}
+
+impl Exportable for Canvas {
+    fn content_bounds(&self) -> Option<Rect> {
+        self.with_sequence(|seq| (!seq.participants.is_empty()).then(|| self.layout_of(seq).bounds))
+    }
+
+    fn draw_scene(&self, snapshot: &gtk::Snapshot, scene: &Scene) {
+        let imp = self.imp();
+        let viewport = scene.viewport;
+        let dark = scene.dark;
+        let colors = scene.colors;
+        let seq = imp.seq.borrow();
+        let layout = self.layout_of(&seq);
+        let selection = imp.selection.borrow().clone().filter(|_| scene.interactive);
+        let selected_item = match &selection {
+            Some(Selection::Item(i)) => Some(*i),
+            _ => None,
+        };
+        let selected_participant = match &selection {
+            Some(Selection::Participant(id)) => seq.participant_index(id),
+            _ => None,
+        };
+        let selected_block = selected_item.and_then(|i| seq.block_markers(i));
+        let block_selected = |start: usize| selected_block.as_ref().is_some_and(|m| m[0] == start);
+        let mut texts: Vec<(String, Point, gtk::gdk::RGBA)> = Vec::new();
+
+        let cr = drawing::world_context(snapshot, &viewport, scene.size);
+        if scene.interactive {
+            drawing::draw_grid(&cr, &viewport.visible(scene.size), viewport.zoom, &colors);
+        }
+
+        if let (Some(title), Some(at)) = (&seq.title, layout.title) {
+            texts.push((title.clone(), at, colors.fg));
+        }
+
+        // Highlight blocks sit behind everything else.
+        for frame in layout.frames.iter().filter(|f| f.kind == BlockKind::Rect) {
+            let label = block_label(&seq, frame.start);
+            let color = gdk::RGBA::parse(label.trim()).ok();
+            log_draw_error(render::draw_highlight_block(
+                &cr,
+                &frame.rect,
+                color,
+                dark,
+                &colors,
+                block_selected(frame.start),
+            ));
+        }
+
+        for (i, column) in layout.columns.iter().enumerate() {
+            log_draw_error(render::draw_lifeline(
+                &cr,
+                column.center,
+                column.head.y + column.head.h,
+                column.foot.y,
+                &colors,
+                selected_participant == Some(i),
+            ));
+        }
+        for bar in &layout.activations {
+            log_draw_error(render::draw_activation(&cr, &bar.rect, &colors));
+        }
+
+        for frame in layout.frames.iter().filter(|f| f.kind != BlockKind::Rect) {
+            let keyword = frame.kind.keyword();
+            let (kw, _) = drawing::text_size(self, keyword);
+            let tab_width = kw + render::TAB_PADDING;
+            let branch_ys: Vec<f64> = frame.branches.iter().map(|b| b.1).collect();
+            log_draw_error(render::draw_frame(
+                &cr,
+                &frame.rect,
+                tab_width,
+                &branch_ys,
+                &colors,
+                block_selected(frame.start),
+            ));
+            let header_y = frame.rect.y + (layout::BLOCK_HEADER - 4.0) / 2.0;
+            texts.push((
+                keyword.to_string(),
+                Point::new(frame.rect.x + tab_width / 2.0 - 3.0, header_y),
+                colors.fg,
+            ));
+            let mut labels = vec![(block_label(&seq, frame.start), header_y, tab_width)];
+            labels.extend(
+                frame
+                    .branches
+                    .iter()
+                    .map(|(i, y)| (block_label(&seq, *i), y + layout::BLOCK_HEADER / 2.0, 0.0)),
+            );
+            for (label, y, indent) in labels.into_iter().filter(|l| !l.0.is_empty()) {
+                let text = format!("[{label}]");
+                let (w, _) = drawing::text_size(self, &text);
+                texts.push((
+                    text,
+                    Point::new(frame.rect.x + indent + 8.0 + w / 2.0, y),
+                    colors.fg,
+                ));
+            }
+        }
+
+        let note_fill = render::note_fill(dark);
+        for (i, (item, row)) in seq.items.iter().zip(&layout.rows).enumerate() {
+            let highlighted = selected_item == Some(i);
+            match (item, &row.shape) {
+                (
+                    Item::Message(m),
+                    RowShape::Message {
+                        y,
+                        x1,
+                        x2,
+                        self_loop,
+                        number,
+                        label,
+                    },
+                ) => {
+                    log_draw_error(render::draw_message(
+                        &cr,
+                        m.line,
+                        m.head,
+                        (*x1, *x2, *y),
+                        *self_loop,
+                        &colors,
+                        highlighted,
+                    ));
+                    if let Some(n) = number {
+                        let at = Point::new(*x1, *y);
+                        log_draw_error(render::draw_number_badge(&cr, at, &colors));
+                        texts.push((n.to_string(), at, gdk::RGBA::WHITE));
+                    }
+                    texts.push((m.text.clone(), *label, colors.fg));
+                }
+                (Item::Note(n), RowShape::Note(rect)) => {
+                    log_draw_error(render::draw_note(
+                        &cr,
+                        rect,
+                        &note_fill,
+                        &colors,
+                        highlighted,
+                    ));
+                    texts.push((n.text.clone(), rect.center(), colors.fg));
+                }
+                (Item::Activate(_) | Item::Deactivate(_), RowShape::Activation { y, x }) => {
+                    log_draw_error(render::draw_activation_marker(
+                        &cr,
+                        Point::new(*x, *y),
+                        &colors,
+                        highlighted,
+                    ));
+                }
+                _ => {}
+            }
+        }
+
+        for (i, (p, column)) in seq.participants.iter().zip(&layout.columns).enumerate() {
+            for rect in [&column.head, &column.foot] {
+                log_draw_error(render::draw_participant(
+                    &cr,
+                    p.kind,
+                    rect,
+                    &colors,
+                    selected_participant == Some(i),
+                ));
+                texts.push((
+                    p.label.clone(),
+                    render::participant_label_center(p.kind, rect),
+                    colors.fg,
+                ));
+            }
+        }
+
+        if scene.interactive {
+            self.draw_drag_feedback(&cr, &layout, &colors, viewport.zoom);
+        }
+        drop(cr);
+
+        for (text, at, color) in texts.iter().filter(|t| !t.0.is_empty()) {
+            let text_layout = drawing::label_layout(self, text);
+            drawing::draw_text(snapshot, &viewport, &text_layout, *at, color);
+        }
     }
 }

@@ -15,6 +15,7 @@ use gtk::subclass::prelude::*;
 use gtk::{cairo, gdk, glib};
 
 use crate::drawing::{self, Colors, Text, log_draw_error};
+use crate::export::{self, Exportable, Scene};
 use crate::geometry::{Point, Rect};
 use crate::history::History;
 use crate::ids::RenameError;
@@ -477,15 +478,7 @@ impl BoxCanvas {
     }
 
     pub fn fit_to_content(&self) {
-        let measure = self.measure();
-        let bounds = self.with_dyn(|diagram| {
-            diagram
-                .boxes(&measure)
-                .into_iter()
-                .map(|(_, rect)| rect)
-                .reduce(|a, b| a.union(&b))
-        });
-        self.fit_bounds(bounds.flatten());
+        self.fit_bounds(self.content_bounds());
     }
 
     // ----- Diagram access ---------------------------------------------------
@@ -629,70 +622,8 @@ impl BoxCanvas {
     // ----- Rendering --------------------------------------------------------
 
     fn draw(&self, snapshot: &gtk::Snapshot) {
-        let imp = self.imp();
-        let viewport = self.viewport().get();
-        let zoom = viewport.zoom;
-        let colors = Colors::new(self.color(), adw::StyleManager::default().is_dark());
-        let diagram_ref = imp.diagram.borrow();
-        let Some(diagram) = diagram_ref.as_deref() else {
-            return;
-        };
-        let drag = imp.drag.borrow();
-        let measure = self.measure();
-
-        let mut highlight = Highlight::default();
-        match self.selection() {
-            Some(Selection::Box(id)) => highlight.boxes.push(id),
-            Some(Selection::Link(i)) => highlight.link = Some(i),
-            None => {}
-        }
-        if let Drag::Connect { cursor, .. } = &*drag {
-            highlight.boxes.extend(self.box_at(*cursor));
-        }
-
-        let cr = drawing::world_context(snapshot, &viewport, self.widget_size());
-        drawing::draw_grid(&cr, &viewport.visible(self.widget_size()), zoom, &colors);
-        let paths = self.link_paths(diagram);
-        let texts = diagram.draw(&cr, &paths, &highlight, &colors, &measure);
-
-        // Interaction overlay: handles, the link being dragged and the add-row button.
-        match &*drag {
-            Drag::Connect { from, cursor } => {
-                if let Some(rect) = diagram.box_rect(from, &measure) {
-                    log_draw_error(drawing::draw_rubber_band(
-                        &cr,
-                        rect.center(),
-                        *cursor,
-                        zoom,
-                        &colors,
-                    ));
-                }
-            }
-            Drag::None => {
-                for id in [imp.hovered.borrow().clone(), self.selected_box()]
-                    .into_iter()
-                    .flatten()
-                {
-                    if let Some(rect) = diagram.box_rect(&id, &measure) {
-                        log_draw_error(drawing::draw_ports(
-                            &cr,
-                            &rect.ports(),
-                            PORT_RADIUS / zoom,
-                            &colors,
-                        ));
-                    }
-                }
-                if let Some(center) = self.add_button_center() {
-                    log_draw_error(drawing::draw_add_button(&cr, center, zoom, &colors));
-                }
-            }
-            _ => {}
-        }
-        drop(cr);
-
-        for text in &texts {
-            text.draw(self, snapshot, &viewport);
-        }
+        let scene = export::screen_scene(self, self.viewport().get());
+        self.draw_scene(snapshot, &scene);
     }
 
     // ----- Interaction ------------------------------------------------------
@@ -1075,6 +1006,101 @@ impl BoxCanvas {
         self.emit_by_name::<()>("history-changed", &[]);
         self.emit_by_name::<()>("selection-changed", &[]);
         self.queue_draw();
+    }
+}
+
+impl Exportable for BoxCanvas {
+    fn content_bounds(&self) -> Option<Rect> {
+        let measure = self.measure();
+        self.with_dyn(|diagram| {
+            let boxes = diagram
+                .boxes(&measure)
+                .into_iter()
+                .map(|(_, rect)| rect)
+                .reduce(|a, b| a.union(&b))?;
+            Some(
+                self.link_paths(diagram)
+                    .iter()
+                    .flatten()
+                    .fold(boxes, |bounds, p| bounds.include(*p)),
+            )
+        })
+        .flatten()
+    }
+
+    fn draw_scene(&self, snapshot: &gtk::Snapshot, scene: &Scene) {
+        let imp = self.imp();
+        let viewport = scene.viewport;
+        let zoom = viewport.zoom;
+        let colors = scene.colors;
+        let diagram_ref = imp.diagram.borrow();
+        let Some(diagram) = diagram_ref.as_deref() else {
+            return;
+        };
+        let drag_state = imp.drag.borrow();
+        let drag = if scene.interactive {
+            &*drag_state
+        } else {
+            &Drag::None
+        };
+        let measure = self.measure();
+
+        let mut highlight = Highlight::default();
+        match self.selection().filter(|_| scene.interactive) {
+            Some(Selection::Box(id)) => highlight.boxes.push(id),
+            Some(Selection::Link(i)) => highlight.link = Some(i),
+            None => {}
+        }
+        if let Drag::Connect { cursor, .. } = drag {
+            highlight.boxes.extend(self.box_at(*cursor));
+        }
+
+        let cr = drawing::world_context(snapshot, &viewport, scene.size);
+        if scene.interactive {
+            drawing::draw_grid(&cr, &viewport.visible(scene.size), zoom, &colors);
+        }
+        let paths = self.link_paths(diagram);
+        let texts = diagram.draw(&cr, &paths, &highlight, &colors, &measure);
+
+        // Interaction overlay: handles, the link being dragged and the add-row button.
+        match drag {
+            _ if !scene.interactive => {}
+            Drag::Connect { from, cursor } => {
+                if let Some(rect) = diagram.box_rect(from, &measure) {
+                    log_draw_error(drawing::draw_rubber_band(
+                        &cr,
+                        rect.center(),
+                        *cursor,
+                        zoom,
+                        &colors,
+                    ));
+                }
+            }
+            Drag::None => {
+                for id in [imp.hovered.borrow().clone(), self.selected_box()]
+                    .into_iter()
+                    .flatten()
+                {
+                    if let Some(rect) = diagram.box_rect(&id, &measure) {
+                        log_draw_error(drawing::draw_ports(
+                            &cr,
+                            &rect.ports(),
+                            PORT_RADIUS / zoom,
+                            &colors,
+                        ));
+                    }
+                }
+                if let Some(center) = self.add_button_center() {
+                    log_draw_error(drawing::draw_add_button(&cr, center, zoom, &colors));
+                }
+            }
+            _ => {}
+        }
+        drop(cr);
+
+        for text in &texts {
+            text.draw(self, snapshot, &viewport);
+        }
     }
 }
 
