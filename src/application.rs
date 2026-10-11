@@ -106,6 +106,7 @@ impl MermanApplication {
         self.set_accels_for_action("win.open", &["<Control>o"]);
         self.set_accels_for_action("win.save", &["<Control>s"]);
         self.set_accels_for_action("win.save-as", &["<Control><Shift>s"]);
+        self.set_accels_for_action("win.copy-source", &["<Control><Shift>c"]);
     }
 
     fn authors() -> Vec<&'static str> {

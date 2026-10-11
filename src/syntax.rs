@@ -130,6 +130,24 @@ pub fn position_comment(comment: &str) -> Option<Option<(String, Point)>> {
     Some(read())
 }
 
+/// Source without the comments this editor adds for itself, for use outside
+/// of it. Other comments are kept.
+pub fn strip_editor_comments(src: &str) -> String {
+    let mut out: String = src
+        .lines()
+        .filter(|line| {
+            line.trim()
+                .strip_prefix("%%")
+                .is_none_or(|comment| position_comment(comment).is_none())
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    if src.ends_with('\n') {
+        out.push('\n');
+    }
+    out
+}
+
 /// Comment line storing a node position, rounded to whole units.
 pub fn position_line(id: &str, pos: Point) -> String {
     format!(
@@ -176,6 +194,16 @@ mod tests {
         );
         assert_eq!(position_comment(" @merman pos A x"), Some(None));
         assert_eq!(position_comment(" plain comment"), None);
+    }
+
+    #[test]
+    fn strips_only_editor_comments() {
+        let src = "flowchart TD\n    A --> B\n    %% keep me\n%% @merman pos A 1 2\n  %% @merman pos B 3 4\n";
+        assert_eq!(
+            strip_editor_comments(src),
+            "flowchart TD\n    A --> B\n    %% keep me\n"
+        );
+        assert_eq!(strip_editor_comments("graph TD"), "graph TD");
     }
 
     #[test]

@@ -259,6 +259,9 @@ impl MermanApplicationWindow {
                     });
                 })
                 .build(),
+            gio::ActionEntry::builder("copy-source")
+                .activate(|win: &Self, _, _| win.copy_source())
+                .build(),
             gio::ActionEntry::builder("undo")
                 .activate(|win: &Self, _, _| win.undo())
                 .build(),
@@ -735,6 +738,14 @@ impl MermanApplicationWindow {
         imp.window_title.set_title(&title);
         imp.window_title.set_subtitle(&folder);
         self.set_title(Some(&title));
+    }
+
+    /// Copies the Mermaid source to the clipboard without the comments this
+    /// editor adds for itself, ready to paste where Mermaid is rendered.
+    fn copy_source(&self) {
+        let text = crate::syntax::strip_editor_comments(&self.source_text());
+        self.clipboard().set_text(&text);
+        self.toast(&gettext("Mermaid source copied"));
     }
 
     fn toast(&self, message: &str) {

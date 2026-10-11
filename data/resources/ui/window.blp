@@ -54,6 +54,13 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
             action-name: "win.save";
           }
 
+          [start]
+          Button {
+            icon-name: "edit-copy-symbolic";
+            tooltip-text: _("Copy Mermaid Source");
+            action-name: "win.copy-source";
+          }
+
           title-widget: Adw.WindowTitle window_title {};
 
           [end]
