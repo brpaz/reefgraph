@@ -1,67 +1,85 @@
 # Architecture
 
-Merman is a GTK4/libadwaita application written in Rust. UI layouts are Blueprint files compiled to GtkBuilder XML at build time and bundled into a GResource.
+Merman is a GTK4/libadwaita application written in Rust for editing Mermaid flowcharts and sequence diagrams. UI layouts are Blueprint files compiled to GtkBuilder XML at build time and bundled into a GResource.
 
 ## Modules
 
 ```
 src/
-├── main.rs            # i18n, resource loading, application start
-├── application.rs     # AdwApplication: actions, accelerators, about dialog, file open from CLI
-├── window.rs          # Main window: wires components, source <-> canvas sync, file I/O
-├── flowchart/         # Domain, no GTK dependency
-│   ├── model.rs       # Flowchart, Node, Edge, shapes, strokes, heads
-│   ├── parser.rs      # Mermaid flowchart text -> model
-│   ├── serializer.rs  # Model -> Mermaid flowchart text
-│   └── layout.rs      # Layered auto layout
-├── canvas/            # MermanCanvas widget
-│   ├── mod.rs         # State, gestures, drag-and-drop, inline label editor, rendering
-│   ├── geometry.rs    # Shape sizes, outline clipping, edge paths and routing, hit testing
-│   ├── render.rs      # Cairo drawing of shapes, edges, handles
-│   └── history.rs     # Snapshot undo/redo stack
-├── palette.rs         # MermanPalette: shape tiles (click or drag onto the canvas)
-├── inspector.rs       # MermanInspector: properties of diagram / node / link
-└── labels.rs          # Translatable names for model enums
+├── main.rs              # i18n, resource loading, application start
+├── application.rs       # AdwApplication: actions, accelerators, about dialog, file open from CLI
+├── window.rs            # Main window: picks the editor for the diagram type, source <-> canvas sync, file I/O
+├── diagram.rs           # Diagram type detection and parse dispatch
+├── syntax.rs            # Shared parsing: ParseError, front matter/declaration split, `;` statements
+├── ids.rs               # Element id rules shared by the models
+├── geometry.rs          # Point, Rect
+├── viewport.rs          # Pan/zoom mapping between canvas and widget coordinates
+├── history.rs           # Snapshot undo/redo stack
+├── drawing.rs           # Colors, label layout, text and Cairo helpers shared by the canvases
+├── interaction.rs       # Navigable trait (scroll/zoom/pan), InlineEditor popover
+├── palette.rs           # MermanPalette: tiles supplied by the active editor
+├── combo.rs, labels.rs  # Combo row models and translatable enum names
+├── flowchart/           # Flowchart domain (no GTK): model, parser, serializer, layered layout
+├── flowchart_editor/    # MermanFlowchartCanvas, MermanFlowchartInspector, shape geometry and rendering
+├── sequence/            # Sequence domain (no GTK): model, parser, serializer, layout and hit testing
+└── sequence_editor/     # MermanSequenceCanvas, MermanSequenceInspector, rendering
 
-data/resources/ui/*.blp  # Blueprint templates for window, palette, inspector, shortcuts
+data/resources/ui/*.blp  # Blueprint templates for window, palette, inspectors, shortcuts
 ```
 
-`flowchart` is pure Rust and holds all parsing, serialization and layout logic, so it is covered by plain `cargo test`. The GTK modules depend on it, never the other way around.
+Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its canvas and properties panel. Editor modules depend on the domain and the shared modules, never on each other.
 
 ## Data Flow
 
 ```mermaid
 flowchart LR
-    Text[Source view] -- "debounced parse" --> Canvas
+    Text[Source view] -- "debounced parse" --> Window
+    Window -- "set_chart / set_sequence" --> Canvas
     Canvas -- "changed: serialize" --> Text
     Palette -- "click / drag" --> Canvas
     Inspector -- "edit()" --> Canvas
     Canvas -- "selection-changed" --> Inspector
 ```
 
-- The canvas owns the current `Flowchart`. Every user edit goes through `Canvas::edit`, which records an undo snapshot and emits `changed`.
-- The window turns `changed` into Mermaid text. While it rewrites the buffer it sets a `syncing` flag so the change is not parsed back.
-- Text edits are parsed 300 ms after the last keystroke. A valid result replaces the canvas chart (`Canvas::set_chart`), keeping current positions of nodes the text does not position. A parse error is shown in a banner and the canvas is left alone.
+- The window shows one editor at a time, chosen from the diagram declaration (`flowchart`/`graph` or `sequenceDiagram`). Typing a different declaration in the source loads the diagram into the other editor.
+- Each canvas owns its model. Every user edit goes through `edit`/`try_edit`, which records an undo snapshot and emits `changed`.
+- The window turns `changed` into Mermaid text, replacing the buffer contents as one undoable step. While it does so it sets a `syncing` flag so the change is not parsed back.
+- Text edits are parsed 300 ms after the last keystroke. A valid result replaces the canvas model; a parse error is shown in a banner and the canvas is left alone.
 - Canvas signals: `changed` (user edit), `selection-changed`, `history-changed` (undo/redo availability).
 
 ## Canvas Interaction
+
+Both canvases: scroll to pan, Ctrl+scroll to zoom around the pointer, middle-drag or drag on empty space to pan, double-click to edit text in place, Delete, F2, Ctrl+Z, Ctrl+Shift+Z, Escape.
+
+### Flowchart
 
 | Gesture | Effect |
 |---|---|
 | Drag node | Move (snapped to a 10 px grid) |
 | Drag from a node handle, or Shift+drag a node | Create a link to the node under the pointer on release |
-| Drag empty space / middle-drag / scroll | Pan |
-| Ctrl+scroll | Zoom around the pointer |
-| Double-click node or link | Edit label inline |
 | Double-click empty space | Add a rectangle and edit its label |
 | Drop a palette tile | Add that shape at the drop point |
-| Delete, F2, Ctrl+Z, Ctrl+Shift+Z, Escape | Delete, rename, undo, redo, clear selection |
 
 Edges between the same pair of nodes are bent apart. An edge whose straight path crosses another node is rerouted as an arc on the first side that clears all nodes.
 
+### Sequence diagram
+
+| Gesture | Effect |
+|---|---|
+| Drag a participant box sideways | Reorder participants |
+| Drag from a lifeline to another lifeline | Add a message at that height (right of its own lifeline: message to self) |
+| Drag a message, note or block edge up or down | Move that row; moves that would unbalance a block are rejected |
+| Double-click the header area | Add a participant |
+| Drop a palette tile | Participant/actor: insert at that column. Note: right of the nearest lifeline. Block: wrap the message or note under the pointer, or add an empty block |
+
+Blocks (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`) are stored as flat start/branch/end markers in the item list, so their extent changes by dragging the markers like any other row. `Sequence::validate` keeps them balanced.
+
 ## File Format
 
-Files are plain Mermaid. Manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). Statements the model does not cover (`classDef`, `class`, `style`, `linkStyle`, `click`, comments) are kept verbatim. `subgraph` is rejected with a parse error.
+Files are plain Mermaid.
+
+- Flowcharts: manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). `classDef`, `class`, `style`, `linkStyle`, `click` and comments are kept verbatim. `subgraph` is rejected with a parse error.
+- Sequence diagrams: layout follows participant and statement order, so no positions are stored. Participants are always declared explicitly when serializing. `links`, `link`, `properties`, `details` and comments are kept verbatim. `box`, `create` and `destroy` are rejected with a parse error.
 
 ## Decisions
 

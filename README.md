@@ -15,12 +15,13 @@
 ## Features
 
 - Visual editing of Mermaid flowcharts: drag shapes from the palette, drag between nodes to link them, double-click to edit labels
+- Visual editing of sequence diagrams: participants and actors, messages drawn by dragging between lifelines, notes, activations, autonumbering and `loop`/`alt`/`opt`/`par`/`critical`/`break`/`rect` blocks; reorder participants and rows by dragging
 - Live two-way sync with the Mermaid source shown next to the canvas
 - All flowchart node shapes, solid/dotted/thick links, arrow/circle/cross heads, link labels
 - Automatic layered layout; manual positions are saved as Mermaid comments, so files stay valid Mermaid
 - Undo/redo, zoom and pan, keyboard shortcuts
 
-Sequence diagrams and entity relationship diagrams are planned.
+Entity relationship diagrams are planned.
 
 ## Install
 
