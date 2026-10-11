@@ -10,3 +10,7 @@ merman-canvas:focus-visible {
 .palette-tile {
   padding: 6px;
 }
+
+.new-diagram-tile {
+  padding: 12px;
+}

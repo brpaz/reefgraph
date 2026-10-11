@@ -14,17 +14,12 @@ use crate::diagram::{self, Diagram, DiagramKind};
 use crate::export::{self, ExportError, ImageFormat};
 use crate::flowchart::{self, NodeShape};
 use crate::interaction::Navigable;
+use crate::new_diagram;
 use crate::palette::Palette;
 use crate::{
     class_diagram, class_editor, erd, erd_editor, flowchart_editor, sequence, sequence_editor,
 };
 
-const SAMPLE_DIAGRAM: &str = "flowchart TD
-    A[Start] --> B{Is it working?}
-    B -->|Yes| C([Ship it])
-    B -->|No| D[Debug]
-    D --> B
-";
 /// Pause after the last keystroke before the source is re-parsed.
 const PARSE_DELAY: Duration = Duration::from_millis(300);
 
@@ -140,7 +135,7 @@ mod imp {
             obj.setup_actions();
             obj.connect_components();
             obj.show_kind(DiagramKind::Flowchart);
-            obj.load_text(SAMPLE_DIAGRAM, None);
+            obj.load_text(DiagramKind::Flowchart.sample(), None);
         }
     }
 
@@ -226,17 +221,17 @@ impl MermanApplicationWindow {
 
     fn setup_actions(&self) {
         let actions = [
-            gio::ActionEntry::builder("new-flowchart")
-                .activate(|win: &Self, _, _| win.spawn_new_document(DiagramKind::Flowchart))
-                .build(),
-            gio::ActionEntry::builder("new-sequence")
-                .activate(|win: &Self, _, _| win.spawn_new_document(DiagramKind::Sequence))
-                .build(),
-            gio::ActionEntry::builder("new-class")
-                .activate(|win: &Self, _, _| win.spawn_new_document(DiagramKind::Class))
-                .build(),
-            gio::ActionEntry::builder("new-erd")
-                .activate(|win: &Self, _, _| win.spawn_new_document(DiagramKind::Erd))
+            gio::ActionEntry::builder("new-diagram")
+                .activate(|win: &Self, _, _| {
+                    new_diagram::present(
+                        win,
+                        glib::clone!(
+                            #[weak]
+                            win,
+                            move |kind| win.spawn_new_document(kind)
+                        ),
+                    )
+                })
                 .build(),
             gio::ActionEntry::builder("open")
                 .activate(|win: &Self, _, _| {

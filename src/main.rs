@@ -17,6 +17,7 @@ mod ids;
 mod interaction;
 mod labels;
 mod layered;
+mod new_diagram;
 mod palette;
 mod routing;
 mod sequence;

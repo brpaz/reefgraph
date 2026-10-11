@@ -15,4 +15,5 @@ src/erd_editor/mod.rs
 src/sequence_editor/inspector.rs
 src/sequence_editor/mod.rs
 src/labels.rs
+src/new_diagram.rs
 src/window.rs

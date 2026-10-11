@@ -20,6 +20,14 @@ pub enum DiagramKind {
 }
 
 impl DiagramKind {
+    /// Every kind, in the order offered for new documents.
+    pub const ALL: [DiagramKind; 4] = [
+        DiagramKind::Flowchart,
+        DiagramKind::Sequence,
+        DiagramKind::Class,
+        DiagramKind::Erd,
+    ];
+
     /// Source of a new, empty diagram.
     pub fn template(self) -> &'static str {
         match self {
@@ -27,6 +35,48 @@ impl DiagramKind {
             DiagramKind::Sequence => "sequenceDiagram\n",
             DiagramKind::Erd => "erDiagram\n",
             DiagramKind::Class => "classDiagram\n",
+        }
+    }
+
+    /// Small example diagram, shown on first start and as a preview.
+    pub fn sample(self) -> &'static str {
+        match self {
+            DiagramKind::Flowchart => {
+                "flowchart TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C([Ship it])
+    B -->|No| D[Debug]
+    D --> B
+"
+            }
+            DiagramKind::Sequence => {
+                "sequenceDiagram
+    actor User
+    participant App
+    User->>App: Save
+    App-->>User: Saved
+"
+            }
+            DiagramKind::Erd => {
+                "erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    CUSTOMER {
+        string name
+    }
+    ORDER {
+        int id PK
+    }
+"
+            }
+            DiagramKind::Class => {
+                "classDiagram
+    class Animal {
+        +String name
+        +eat()
+    }
+    Animal <|-- Duck
+"
+            }
         }
     }
 }
@@ -80,14 +130,10 @@ mod tests {
     }
 
     #[test]
-    fn templates_parse() {
-        for kind in [
-            DiagramKind::Flowchart,
-            DiagramKind::Sequence,
-            DiagramKind::Erd,
-            DiagramKind::Class,
-        ] {
+    fn templates_and_samples_parse() {
+        for kind in DiagramKind::ALL {
             assert_eq!(parse(kind.template()).unwrap().kind(), kind);
+            assert_eq!(parse(kind.sample()).unwrap().kind(), kind);
         }
     }
 }

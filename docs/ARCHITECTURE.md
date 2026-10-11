@@ -9,7 +9,8 @@ src/
 ├── main.rs              # i18n, resource loading, application start
 ├── application.rs       # AdwApplication: actions, accelerators, about dialog, file open from CLI
 ├── window.rs            # Main window: picks the editor for the diagram type, source <-> canvas sync, file I/O
-├── diagram.rs           # Diagram type detection and parse dispatch
+├── diagram.rs           # Diagram type detection and parse dispatch; DiagramKind templates and samples
+├── new_diagram.rs       # New Diagram dialog: one tile per DiagramKind with a rendered sample preview
 ├── syntax.rs            # Shared parsing: ParseError, front matter/declaration split, `;` statements
 ├── ids.rs               # Element id rules shared by the models
 ├── geometry.rs          # Point, Rect
@@ -34,6 +35,8 @@ src/
 
 data/resources/ui/*.blp  # Blueprint templates for window, palette, inspectors, shortcuts
 ```
+
+New documents are created from the **New Diagram** dialog (Ctrl+N or the "+" header button). It lists `DiagramKind::ALL`; each tile shows the kind's sample diagram rendered with the export code, a name and a description from `labels.rs`. Adding a diagram type to the dialog takes a `DiagramKind` variant with a template and sample, its labels, and a preview arm in `new_diagram.rs`.
 
 Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its properties panel. Editor modules depend on the domain and the shared modules, never on each other.
 

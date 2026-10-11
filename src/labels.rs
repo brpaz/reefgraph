@@ -3,9 +3,28 @@
 use gettextrs::gettext;
 
 use crate::class_diagram::Head as ClassHead;
+use crate::diagram::DiagramKind;
 use crate::erd::Cardinality;
 use crate::flowchart::{Direction, Head, NodeShape, Stroke};
 use crate::sequence::{ArrowHead, BlockKind, LineStyle, NotePlacement, ParticipantKind};
+
+pub fn diagram_kind(kind: DiagramKind) -> String {
+    gettext(match kind {
+        DiagramKind::Flowchart => "Flowchart",
+        DiagramKind::Sequence => "Sequence Diagram",
+        DiagramKind::Class => "Class Diagram",
+        DiagramKind::Erd => "Entity Relationship Diagram",
+    })
+}
+
+pub fn diagram_kind_description(kind: DiagramKind) -> String {
+    gettext(match kind {
+        DiagramKind::Flowchart => "Processes and decisions as shapes joined by arrows",
+        DiagramKind::Sequence => "Messages exchanged between participants over time",
+        DiagramKind::Class => "Classes, their members and how they relate",
+        DiagramKind::Erd => "Database entities, attributes and relationships",
+    })
+}
 
 pub fn shape(shape: NodeShape) -> String {
     gettext(match shape {

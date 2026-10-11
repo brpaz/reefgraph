@@ -42,6 +42,13 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
 
           [start]
           Button {
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("New Diagram");
+            action-name: "win.new-diagram";
+          }
+
+          [start]
+          Button {
             icon-name: "document-open-symbolic";
             tooltip-text: _("Open");
             action-name: "win.open";
@@ -213,23 +220,8 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
 menu primary_menu {
   section {
     item {
-      label: _("New _Flowchart");
-      action: "win.new-flowchart";
-    }
-
-    item {
-      label: _("New _Sequence Diagram");
-      action: "win.new-sequence";
-    }
-
-    item {
-      label: _("New _Class Diagram");
-      action: "win.new-class";
-    }
-
-    item {
-      label: _("New _Entity Relationship Diagram");
-      action: "win.new-erd";
+      label: _("_New Diagram…");
+      action: "win.new-diagram";
     }
 
     item {
