@@ -60,29 +60,40 @@ pub trait BoxDiagram: Debug {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
     fn box_ids(&self) -> Vec<String>;
+    /// Positioned boxes and their outer rectangles, in drawing order.
+    fn boxes(&self, measure: Measure) -> Vec<(&str, Rect)>;
     fn position(&self, id: &str) -> Option<Point>;
     fn set_position(&mut self, id: &str, pos: Point);
     /// Outer rectangle of a positioned box.
     fn box_rect(&self, id: &str, measure: Measure) -> Option<Rect>;
+    /// Name shown in the box header: the label, or the id when there is none.
+    fn label(&self, id: &str) -> Option<String>;
+    fn set_label(&mut self, id: &str, label: String);
+    /// Center of the box header, where its name editor points.
+    fn header_center(&self, id: &str, measure: Measure) -> Option<Point>;
     /// Positions boxes that have none, or every box when `all` is set.
     fn layout(&mut self, all: bool, measure: Measure);
     /// Endpoints of every link, indexed like the links.
     fn links(&self) -> Vec<(String, String)>;
 
+    /// Palette item added by double-clicking empty canvas.
+    fn default_preset(&self) -> &'static str;
     /// Adds a box for a palette item, returning its id.
     fn add_box(&mut self, preset: &str, at: Point) -> Option<String>;
     fn remove_box(&mut self, id: &str);
     fn rename_box(&mut self, old: &str, new: &str) -> Result<(), RenameError>;
     fn add_link(&mut self, from: &str, to: &str) -> usize;
     fn remove_link(&mut self, index: usize);
+    fn link_label(&self, index: usize) -> Option<String>;
+    fn set_link_label(&mut self, index: usize, label: String);
     /// Row under `p`, if the point is on one of the box's rows.
     fn row_at(&self, id: &str, p: Point, measure: Measure) -> Option<usize>;
     /// Appends an empty row and returns its index.
     fn add_row(&mut self, id: &str) -> Option<usize>;
-    /// Current text of an edit target and where its editor should point.
-    fn edit_text(&self, target: &EditTarget, measure: Measure) -> Option<(String, Point)>;
-    /// Applies edited text; links are given their label.
-    fn apply_text(&mut self, target: &EditTarget, text: &str) -> Result<(), String>;
+    /// Text of a row and where its in-place editor should point.
+    fn row_text(&self, id: &str, row: usize, measure: Measure) -> Option<(String, Point)>;
+    /// Applies edited row text.
+    fn set_row_text(&mut self, id: &str, row: usize, text: &str) -> Result<(), String>;
     /// Draws boxes and links, returning their labels to draw on top.
     fn draw(
         &self,
@@ -278,8 +289,8 @@ impl BoxCanvas {
         let _ = self.try_edit_dyn(|diagram| {
             if let Some(m) = diagram.as_any_mut().downcast_mut::<M>() {
                 f(m);
+                diagram.layout(true, &measure);
             }
-            diagram.layout(true, &measure);
             Ok::<_, ()>(())
         });
         self.fit_to_content();
@@ -422,12 +433,12 @@ impl BoxCanvas {
     }
 
     pub fn fit_to_content(&self) {
+        let measure = self.measure();
         let bounds = self.with_dyn(|diagram| {
-            let measure = self.measure();
             diagram
-                .box_ids()
-                .iter()
-                .filter_map(|id| diagram.box_rect(id, &measure))
+                .boxes(&measure)
+                .into_iter()
+                .map(|(_, rect)| rect)
                 .reduce(|a, b| a.union(&b))
         });
         self.fit_bounds(bounds.flatten());
@@ -482,23 +493,24 @@ impl BoxCanvas {
     }
 
     fn box_at(&self, p: Point) -> Option<String> {
+        let measure = self.measure();
         self.with_dyn(|diagram| {
-            let measure = self.measure();
-            diagram.box_ids().into_iter().rev().find(|id| {
-                diagram
-                    .box_rect(id, &measure)
-                    .is_some_and(|r| r.contains(p))
-            })
+            diagram
+                .boxes(&measure)
+                .into_iter()
+                .rev()
+                .find(|(_, rect)| rect.contains(p))
+                .map(|(id, _)| id.to_string())
         })
         .flatten()
     }
 
     fn box_near(&self, p: Point) -> bool {
+        let measure = self.measure();
         self.with_dyn(|diagram| {
-            diagram.box_ids().iter().any(|id| {
-                diagram
-                    .position(id)
-                    .is_some_and(|q| (q.x - p.x).abs() < 20.0 && (q.y - p.y).abs() < 20.0)
+            diagram.boxes(&measure).iter().any(|(_, rect)| {
+                let c = rect.center();
+                (c.x - p.x).abs() < 20.0 && (c.y - p.y).abs() < 20.0
             })
         })
         .unwrap_or(false)
@@ -506,15 +518,10 @@ impl BoxCanvas {
 
     fn link_paths(&self, diagram: &dyn BoxDiagram) -> Vec<Vec<Point>> {
         let measure = self.measure();
-        let ids = diagram.box_ids();
-        let nodes: HashMap<&str, (Outline, Rect)> = ids
-            .iter()
-            .filter_map(|id| {
-                Some((
-                    id.as_str(),
-                    (Outline::Rect, diagram.box_rect(id, &measure)?),
-                ))
-            })
+        let nodes: HashMap<&str, (Outline, Rect)> = diagram
+            .boxes(&measure)
+            .into_iter()
+            .map(|(id, rect)| (id, (Outline::Rect, rect)))
             .collect();
         let links = diagram.links();
         let edges: Vec<(&str, &str)> = links
@@ -858,7 +865,8 @@ impl BoxCanvas {
         } else if let Some(i) = self.link_at(world) {
             self.start_edit(EditTarget::Link(i));
         } else if !self.on_add_button(world)
-            && self.add_box("", Some(world))
+            && let Some(preset) = self.with_dyn(|d| d.default_preset())
+            && self.add_box(preset, Some(world))
             && let Some(id) = self.selected_box()
         {
             self.start_edit(EditTarget::Name(id));
@@ -921,15 +929,18 @@ impl BoxCanvas {
     }
 
     pub fn start_edit(&self, target: EditTarget) {
+        let measure = self.measure();
         let found = self
             .with_dyn(|diagram| match &target {
+                EditTarget::Name(id) => {
+                    Some((diagram.label(id)?, diagram.header_center(id, &measure)?))
+                }
+                EditTarget::Row(id, row) => diagram.row_text(id, *row, &measure),
                 // Links are labelled at the middle of their routed path.
                 EditTarget::Link(i) => {
-                    let (text, _) = diagram.edit_text(&target, &self.measure())?;
                     let path = self.link_paths(diagram).get(*i)?.clone();
-                    Some((text, routing::path_midpoint(&path)))
+                    Some((diagram.link_label(*i)?, routing::path_midpoint(&path)))
                 }
-                _ => diagram.edit_text(&target, &self.measure()),
             })
             .flatten();
         let (Some((text, anchor)), Some(editor)) = (found, self.imp().editor.get()) else {
@@ -948,26 +959,35 @@ impl BoxCanvas {
             return;
         };
         let text = text.trim();
-        match self.try_edit_dyn(|diagram| diagram.apply_text(&target, text)) {
-            Ok(()) => {
-                // A rename changes the id the selection refers to.
-                if let EditTarget::Name(old) = &target {
-                    let renamed = self
-                        .with_dyn(|d| {
-                            let ids = d.box_ids();
-                            !ids.contains(old) && ids.iter().any(|id| id == text)
-                        })
-                        .unwrap_or(false);
-                    if renamed {
-                        self.select(Some(Selection::Box(text.to_string())));
-                    }
-                }
+        let result = match &target {
+            EditTarget::Name(id) => self.apply_name(id, text),
+            EditTarget::Row(id, row) => {
+                self.try_edit_dyn(|diagram| diagram.set_row_text(id, *row, text))
             }
-            Err(err) => {
-                tracing::debug!(error = %err, "rejected inline edit");
-                self.error_bell();
-            }
+            EditTarget::Link(i) => self.try_edit_dyn(|diagram| {
+                diagram.set_link_label(*i, text.to_string());
+                Ok(())
+            }),
+        };
+        if let Err(err) = result {
+            tracing::debug!(error = %err, "rejected inline edit");
+            self.error_bell();
         }
+    }
+
+    /// Boxes without a separate label show their id, so editing the name
+    /// renames them; otherwise it changes the label, falling back to the id
+    /// when cleared.
+    fn apply_name(&self, id: &str, text: &str) -> Result<(), String> {
+        let label = self.with_dyn(|d| d.label(id)).flatten();
+        if label.as_deref() == Some(id) {
+            return self.rename_box(id, text).map_err(|e| e.to_string());
+        }
+        let label = if text.is_empty() { id } else { text }.to_string();
+        self.try_edit_dyn(|diagram| {
+            diagram.set_label(id, label);
+            Ok(())
+        })
     }
 
     // ----- Internal helpers -------------------------------------------------

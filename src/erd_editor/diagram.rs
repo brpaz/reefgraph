@@ -7,17 +7,13 @@ use gtk::cairo;
 
 use super::EntityPreset;
 use super::render;
-use crate::box_canvas::{self, BoxDiagram, EditTarget, Highlight, Measure};
+use crate::box_canvas::{self, BoxDiagram, Highlight, Measure};
 use crate::drawing::{self, Colors, Text, log_draw_error};
-use crate::erd::layout::{self, EntityBox, attribute_cells};
+use crate::erd::layout::{self, attribute_cells};
 use crate::erd::{Attribute, Entity, Erd};
 use crate::geometry::{Point, Rect};
 use crate::ids::RenameError;
 use crate::routing;
-
-fn entity_box(entity: &Entity, measure: Measure) -> EntityBox {
-    layout::entity_box(entity, measure)
-}
 
 impl BoxDiagram for Erd {
     fn clone_diagram(&self) -> Box<dyn BoxDiagram> {
@@ -52,11 +48,38 @@ impl BoxDiagram for Erd {
 
     fn box_rect(&self, id: &str, measure: Measure) -> Option<Rect> {
         let entity = self.entity(id)?;
-        Some(entity_box(entity, measure).rect(entity.pos?))
+        Some(layout::entity_box(entity, measure).rect(entity.pos?))
+    }
+
+    fn boxes(&self, measure: Measure) -> Vec<(&str, Rect)> {
+        self.entities
+            .iter()
+            .filter_map(|e| Some((e.id.as_str(), layout::entity_box(e, measure).rect(e.pos?))))
+            .collect()
+    }
+
+    fn label(&self, id: &str) -> Option<String> {
+        Some(self.entity(id)?.label.clone())
+    }
+
+    fn set_label(&mut self, id: &str, label: String) {
+        if let Some(entity) = self.entity_mut(id) {
+            entity.label = label;
+        }
+    }
+
+    fn header_center(&self, id: &str, measure: Measure) -> Option<Point> {
+        let entity = self.entity(id)?;
+        let layout = layout::entity_box(entity, measure);
+        let rect = layout.rect(entity.pos?);
+        Some(Point::new(
+            rect.center().x,
+            rect.y + layout.header_height / 2.0,
+        ))
     }
 
     fn layout(&mut self, all: bool, measure: Measure) {
-        let size = |e: &Entity| entity_box(e, measure).size;
+        let size = |e: &Entity| layout::entity_box(e, measure).size;
         if all {
             layout::layout_all(self, size);
         } else {
@@ -71,13 +94,12 @@ impl BoxDiagram for Erd {
             .collect()
     }
 
+    fn default_preset(&self) -> &'static str {
+        EntityPreset::Empty.id()
+    }
+
     fn add_box(&mut self, preset: &str, at: Point) -> Option<String> {
-        // An empty preset is a plain entity, e.g. from double-clicking the canvas.
-        let preset = if preset.is_empty() {
-            EntityPreset::Empty
-        } else {
-            EntityPreset::from_id(preset)?
-        };
+        let preset = EntityPreset::from_id(preset)?;
         Some(self.add_entity(preset.attributes(), at))
     }
 
@@ -99,9 +121,19 @@ impl BoxDiagram for Erd {
         }
     }
 
+    fn link_label(&self, index: usize) -> Option<String> {
+        Some(self.relationships.get(index)?.label.clone())
+    }
+
+    fn set_link_label(&mut self, index: usize, label: String) {
+        if let Some(r) = self.relationships.get_mut(index) {
+            r.label = label;
+        }
+    }
+
     fn row_at(&self, id: &str, p: Point, measure: Measure) -> Option<usize> {
         let entity = self.entity(id)?;
-        let row = entity_box(entity, measure).row_at(entity.pos?, p)?;
+        let row = layout::entity_box(entity, measure).row_at(entity.pos?, p)?;
         (row < entity.attributes.len()).then_some(row)
     }
 
@@ -113,60 +145,21 @@ impl BoxDiagram for Erd {
         Some(entity.attributes.len() - 1)
     }
 
-    fn edit_text(&self, target: &EditTarget, measure: Measure) -> Option<(String, Point)> {
-        match target {
-            EditTarget::Name(id) => {
-                let entity = self.entity(id)?;
-                let layout = entity_box(entity, measure);
-                let rect = layout.rect(entity.pos?);
-                let at = Point::new(rect.center().x, rect.y + layout.header_height / 2.0);
-                Some((entity.label.clone(), at))
-            }
-            EditTarget::Row(id, row) => {
-                let entity = self.entity(id)?;
-                let text = entity.attributes.get(*row)?.to_line();
-                let at = entity_box(entity, measure)
-                    .row_rect(entity.pos?, *row)
-                    .center();
-                Some((text, at))
-            }
-            EditTarget::Link(i) => {
-                Some((self.relationships.get(*i)?.label.clone(), Point::default()))
-            }
-        }
+    fn row_text(&self, id: &str, row: usize, measure: Measure) -> Option<(String, Point)> {
+        let entity = self.entity(id)?;
+        let text = entity.attributes.get(row)?.to_line();
+        let at = layout::entity_box(entity, measure)
+            .row_rect(entity.pos?, row)
+            .center();
+        Some((text, at))
     }
 
-    fn apply_text(&mut self, target: &EditTarget, text: &str) -> Result<(), String> {
-        match target {
-            // Entities without an alias show their name, so editing it renames.
-            EditTarget::Name(id) => {
-                let has_alias = self.entity(id).is_some_and(|e| e.label != e.id);
-                if !has_alias {
-                    return self.rename_entity(id, text).map_err(|e| e.to_string());
-                }
-                if let Some(entity) = self.entity_mut(id) {
-                    entity.label = if text.is_empty() {
-                        id.clone()
-                    } else {
-                        text.to_string()
-                    };
-                }
-                Ok(())
-            }
-            EditTarget::Row(id, row) => {
-                let attribute = Attribute::parse(text)?;
-                if let Some(slot) = self.entity_mut(id).and_then(|e| e.attributes.get_mut(*row)) {
-                    *slot = attribute;
-                }
-                Ok(())
-            }
-            EditTarget::Link(i) => {
-                if let Some(r) = self.relationships.get_mut(*i) {
-                    r.label = text.to_string();
-                }
-                Ok(())
-            }
+    fn set_row_text(&mut self, id: &str, row: usize, text: &str) -> Result<(), String> {
+        let attribute = Attribute::parse(text)?;
+        if let Some(slot) = self.entity_mut(id).and_then(|e| e.attributes.get_mut(row)) {
+            *slot = attribute;
         }
+        Ok(())
     }
 
     fn draw(
@@ -205,7 +198,7 @@ impl BoxDiagram for Erd {
             let Some(pos) = entity.pos else {
                 continue;
             };
-            let layout = entity_box(entity, measure);
+            let layout = layout::entity_box(entity, measure);
             let rect = layout.rect(pos);
             log_draw_error(render::draw_entity(
                 cr,
@@ -223,6 +216,9 @@ impl BoxDiagram for Erd {
             for row in 0..entity.attributes.len() {
                 let y = layout.row_rect(pos, row).center().y;
                 for (col, cell) in attribute_cells(entity, row).into_iter().enumerate() {
+                    if cell.is_empty() {
+                        continue;
+                    }
                     let (w, _) = measure(&cell);
                     let x = rect.x + layout.columns[col] + w / 2.0;
                     let color = if col == 3 { dim } else { colors.fg };
