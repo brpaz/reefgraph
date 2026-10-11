@@ -230,6 +230,23 @@ impl Erd {
         id
     }
 
+    /// Adds a copy of `entity` at `pos` under a numbered variant of its id,
+    /// returning the new id. A label that just repeats the id follows it.
+    pub fn paste_entity(&mut self, entity: &Entity, pos: Point) -> String {
+        let id = crate::ids::copy_id(&entity.id, |id| self.entity(id).is_some());
+        self.entities.push(Entity {
+            label: if entity.label == entity.id {
+                id.clone()
+            } else {
+                entity.label.clone()
+            },
+            id: id.clone(),
+            pos: Some(pos),
+            ..entity.clone()
+        });
+        id
+    }
+
     pub fn remove_entity(&mut self, id: &str) {
         self.entities.retain(|e| e.id != id);
         self.relationships.retain(|r| r.from != id && r.to != id);
@@ -279,6 +296,21 @@ impl Erd {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn paste_entity_copies_attributes_under_new_id() {
+        let mut erd = Erd::default();
+        let mut customer = Entity::new("CUSTOMER");
+        customer.label = "Customer".into();
+        customer.attributes = vec![Attribute::new("string", "name")];
+        erd.entities.push(customer.clone());
+
+        let id = erd.paste_entity(&customer, Point::new(0.0, 0.0));
+        assert_eq!(id, "CUSTOMER2");
+        let copy = erd.entity("CUSTOMER2").unwrap();
+        assert_eq!(copy.label, "Customer");
+        assert_eq!(copy.attributes, customer.attributes);
+    }
 
     #[test]
     fn parses_attribute_lines() {

@@ -73,6 +73,8 @@ mod imp {
         pub history: RefCell<History<Flowchart>>,
         pub editor: OnceCell<InlineEditor>,
         pub editing: RefCell<Option<Selection>>,
+        /// Node copied with Ctrl+C, as it was when copied.
+        pub clipboard: RefCell<Option<Node>>,
     }
 
     #[glib::object_subclass]
@@ -281,7 +283,13 @@ impl Canvas {
     /// already sitting there.
     pub fn add_node_at_center(&self, shape: NodeShape) {
         let (w, h) = self.widget_size();
-        let mut at = self.viewport().get().to_world(w / 2.0, h / 2.0);
+        let at = self.free_spot(self.viewport().get().to_world(w / 2.0, h / 2.0));
+        self.add_node(shape, at);
+        self.grab_focus();
+    }
+
+    /// `at`, or the first point diagonally down from it with no node on it.
+    fn free_spot(&self, mut at: Point) -> Point {
         while self.with_chart(|c| {
             c.nodes.iter().any(|n| {
                 n.pos
@@ -290,8 +298,32 @@ impl Canvas {
         }) {
             at = Point::new(at.x + 30.0, at.y + 30.0);
         }
-        self.add_node(shape, at);
-        self.grab_focus();
+        at
+    }
+
+    pub fn copy_selection(&self) {
+        let Some(Selection::Node(id)) = self.selection() else {
+            return;
+        };
+        let node = self.with_chart(|c| c.node(&id).cloned());
+        if node.is_some() {
+            self.imp().clipboard.replace(node);
+        }
+    }
+
+    /// Adds a copy of the copied node next to where it was copied from.
+    pub fn paste(&self) {
+        let Some(node) = self.imp().clipboard.borrow().clone() else {
+            return;
+        };
+        let origin = node.pos.unwrap_or_else(|| {
+            let (w, h) = self.widget_size();
+            self.viewport().get().to_world(w / 2.0, h / 2.0)
+        });
+        let at = snap(self.free_spot(origin));
+        let mut id = String::new();
+        self.edit(|chart| id = chart.paste_node(&node, at));
+        self.select(Some(Selection::Node(id)));
     }
 
     /// Changes the flow direction and re-lays out the diagram to match it.
@@ -605,8 +637,10 @@ impl Canvas {
         self.add_controller(drop);
 
         let shortcuts = gtk::ShortcutController::new();
-        let bindings: [(&str, CanvasAction); 8] = [
+        let bindings: [(&str, CanvasAction); 10] = [
             ("Delete|BackSpace", Canvas::delete_selection),
+            ("<Control>c", Canvas::copy_selection),
+            ("<Control>v", Canvas::paste),
             ("<Control>z", Canvas::undo),
             ("<Control><Shift>z|<Control>y", Canvas::redo),
             ("Escape", |c| c.select(None)),

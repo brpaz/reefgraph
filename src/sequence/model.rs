@@ -289,6 +289,27 @@ impl Sequence {
         id
     }
 
+    /// Inserts a copy of `participant` at `index` under the next free id,
+    /// returning it. A label that just repeats the id follows the new id.
+    pub fn paste_participant(&mut self, participant: &Participant, index: usize) -> String {
+        let id = ids::next_free_id(|id| self.participant(id).is_some());
+        let label = if participant.label == participant.id {
+            id.clone()
+        } else {
+            participant.label.clone()
+        };
+        let index = index.min(self.participants.len());
+        self.participants.insert(
+            index,
+            Participant {
+                id: id.clone(),
+                label,
+                kind: participant.kind,
+            },
+        );
+        id
+    }
+
     /// Removes the participant and every message, note and activation that
     /// involves it. Notes spanning two participants keep the other one.
     pub fn remove_participant(&mut self, id: &str) {
@@ -491,6 +512,22 @@ mod tests {
         Item::BlockBranch {
             label: String::new(),
         }
+    }
+
+    #[test]
+    fn paste_participant_inserts_copy_under_new_id() {
+        let mut seq = Sequence::default();
+        seq.add_participant(ParticipantKind::Actor, 0);
+        seq.add_participant(ParticipantKind::Participant, 1);
+        let mut alice = seq.participants[0].clone();
+        alice.label = "Alice".into();
+
+        let id = seq.paste_participant(&alice, 1);
+        assert_eq!(id, "C");
+        let copy = &seq.participants[1];
+        assert_eq!(copy.id, "C");
+        assert_eq!(copy.label, "Alice");
+        assert_eq!(copy.kind, ParticipantKind::Actor);
     }
 
     #[test]

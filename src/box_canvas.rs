@@ -81,6 +81,9 @@ pub trait BoxDiagram: Debug {
     /// Adds a box for a palette item, returning its id.
     fn add_box(&mut self, preset: &str, at: Point) -> Option<String>;
     fn remove_box(&mut self, id: &str);
+    /// Adds a copy of box `id` of `from`, a diagram of the same type, at
+    /// `at`, returning the copy's id.
+    fn paste_box(&mut self, from: &dyn BoxDiagram, id: &str, at: Point) -> Option<String>;
     fn rename_box(&mut self, old: &str, new: &str) -> Result<(), RenameError>;
     fn add_link(&mut self, from: &str, to: &str) -> usize;
     fn remove_link(&mut self, index: usize);
@@ -156,6 +159,9 @@ mod imp {
         pub history: RefCell<History<Box<dyn BoxDiagram>>>,
         pub editor: OnceCell<InlineEditor>,
         pub editing: RefCell<Option<EditTarget>>,
+        /// Box copied with Ctrl+C: the diagram as it was when copied and the
+        /// box's id in it.
+        pub clipboard: RefCell<Option<(Box<dyn BoxDiagram>, String)>>,
     }
 
     #[glib::object_subclass]
@@ -398,6 +404,44 @@ impl BoxCanvas {
         self.select(Some(Selection::Box(id)));
         self.grab_focus();
         true
+    }
+
+    pub fn copy_selection(&self) {
+        let Some(Selection::Box(id)) = self.selection() else {
+            return;
+        };
+        if let Some(diagram) = self.with_dyn(|diagram| diagram.clone_diagram()) {
+            self.imp().clipboard.replace(Some((diagram, id)));
+        }
+    }
+
+    /// Adds a copy of the copied box next to where it was copied from.
+    pub fn paste(&self) {
+        let copied = self
+            .imp()
+            .clipboard
+            .borrow()
+            .as_ref()
+            .map(|(diagram, id)| (diagram.clone_diagram(), id.clone()));
+        let Some((from, id)) = copied else {
+            return;
+        };
+        let mut at = from.position(&id).unwrap_or_else(|| {
+            let (w, h) = self.widget_size();
+            self.viewport().get().to_world(w / 2.0, h / 2.0)
+        });
+        while self.box_near(at) {
+            at = Point::new(at.x + 30.0, at.y + 30.0);
+        }
+        let at = snap(at);
+        let mut pasted = None;
+        let _ = self.try_edit_dyn(|diagram| {
+            pasted = diagram.paste_box(from.as_ref(), &id, at);
+            Ok::<_, ()>(())
+        });
+        if let Some(id) = pasted {
+            self.select(Some(Selection::Box(id)));
+        }
     }
 
     /// Adds a row to the box and starts editing it in place.
@@ -719,8 +763,10 @@ impl BoxCanvas {
         self.add_controller(drop);
 
         let shortcuts = gtk::ShortcutController::new();
-        let bindings: [(&str, CanvasAction); 8] = [
+        let bindings: [(&str, CanvasAction); 10] = [
             ("Delete|BackSpace", BoxCanvas::delete_selection),
+            ("<Control>c", BoxCanvas::copy_selection),
+            ("<Control>v", BoxCanvas::paste),
             ("<Control>z", BoxCanvas::undo),
             ("<Control><Shift>z|<Control>y", BoxCanvas::redo),
             ("Escape", |c| c.select(None)),

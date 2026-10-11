@@ -18,7 +18,9 @@ use crate::history::History;
 use crate::ids::RenameError;
 use crate::interaction::{InlineEditor, Navigable, install_navigation};
 use crate::sequence::layout::{self, Hit, Layout, RowShape};
-use crate::sequence::{BlockKind, Item, Message, Note, NotePlacement, ParticipantKind, Sequence};
+use crate::sequence::{
+    BlockKind, Item, Message, Note, NotePlacement, Participant, ParticipantKind, Sequence,
+};
 use crate::viewport::Viewport;
 
 /// Distance a press must travel before it counts as a drag.
@@ -34,6 +36,14 @@ type CanvasAction = fn(&Canvas);
 pub enum Selection {
     Participant(String),
     Item(usize),
+}
+
+/// What Ctrl+C copied, as it was when copied.
+#[derive(Debug, Clone)]
+pub enum Copied {
+    Participant(Participant),
+    /// A message or note and the row it was copied from.
+    Item(Item, usize),
 }
 
 #[derive(Debug, Default)]
@@ -109,6 +119,7 @@ mod imp {
         pub history: RefCell<History<Sequence>>,
         pub editor: OnceCell<InlineEditor>,
         pub editing: RefCell<Option<Selection>>,
+        pub clipboard: RefCell<Option<super::Copied>>,
     }
 
     #[glib::object_subclass]
@@ -292,6 +303,60 @@ impl Canvas {
             Selection::Participant(id) => seq.remove_participant(id),
             Selection::Item(i) => seq.remove_item(*i),
         });
+    }
+
+    /// Copies the selected participant, message or note. Activations and
+    /// block markers only make sense next to the rows around them.
+    pub fn copy_selection(&self) {
+        let copied = self.with_sequence(|seq| match self.selection()? {
+            Selection::Participant(id) => seq.participant(&id).cloned().map(Copied::Participant),
+            Selection::Item(i) => match seq.items.get(i)? {
+                item @ (Item::Message(_) | Item::Note(_)) => Some(Copied::Item(item.clone(), i)),
+                _ => None,
+            },
+        });
+        if copied.is_some() {
+            self.imp().clipboard.replace(copied);
+        }
+    }
+
+    /// Adds a copy of what was copied: a participant right of the one it was
+    /// copied from, a row below the selected row or the one it was copied from.
+    pub fn paste(&self) {
+        let Some(copied) = self.imp().clipboard.borrow().clone() else {
+            return;
+        };
+        match copied {
+            Copied::Participant(participant) => {
+                let index = self.with_sequence(|seq| {
+                    seq.participants
+                        .iter()
+                        .position(|p| p.id == participant.id)
+                        .map_or(seq.participants.len(), |i| i + 1)
+                });
+                let mut id = String::new();
+                self.edit(|seq| id = seq.paste_participant(&participant, index));
+                self.select(Some(Selection::Participant(id)));
+            }
+            Copied::Item(item, row) => {
+                let (valid, index) = self.with_sequence(|seq| {
+                    let valid = item
+                        .participants()
+                        .iter()
+                        .all(|id| seq.participant(id).is_some());
+                    let after = match self.selection() {
+                        Some(Selection::Item(i)) => i,
+                        _ => row,
+                    };
+                    (valid, (after + 1).min(seq.items.len()))
+                });
+                if !valid {
+                    return;
+                }
+                self.edit(|seq| seq.items.insert(index, item));
+                self.select(Some(Selection::Item(index)));
+            }
+        }
     }
 
     pub fn rename_participant(&self, old: &str, new: &str) -> Result<(), RenameError> {
@@ -708,8 +773,10 @@ impl Canvas {
         self.add_controller(drop);
 
         let shortcuts = gtk::ShortcutController::new();
-        let bindings: [(&str, CanvasAction); 8] = [
+        let bindings: [(&str, CanvasAction); 10] = [
             ("Delete|BackSpace", Canvas::delete_selection),
+            ("<Control>c", Canvas::copy_selection),
+            ("<Control>v", Canvas::paste),
             ("<Control>z", Canvas::undo),
             ("<Control><Shift>z|<Control>y", Canvas::redo),
             ("Escape", |c| c.select(None)),

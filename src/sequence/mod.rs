@@ -7,7 +7,8 @@ pub mod parser;
 pub mod serializer;
 
 pub use model::{
-    ArrowHead, BlockKind, Item, LineStyle, Message, Note, NotePlacement, ParticipantKind, Sequence,
+    ArrowHead, BlockKind, Item, LineStyle, Message, Note, NotePlacement, Participant,
+    ParticipantKind, Sequence,
 };
 pub use parser::parse;
 pub use serializer::serialize;

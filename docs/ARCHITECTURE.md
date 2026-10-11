@@ -60,6 +60,8 @@ flowchart LR
 
 All canvases: scroll to pan, Ctrl+scroll to zoom around the pointer, middle-drag or drag on empty space to pan, double-click to edit text in place, Delete, F2, Ctrl+Z, Ctrl+Shift+Z, Escape.
 
+Ctrl+C copies the selected node, box, participant, message or note into the canvas; Ctrl+V adds a copy as it was when copied. Nodes and boxes land diagonally next to where they were copied from, participants right of the original, messages and notes below the selected row (or the original row). Copies take a fresh id (`ids::next_free_id` for nodes and participants, `ids::copy_id` for classes and entities) and keep a custom label. The clipboard is per canvas, not the system clipboard, so the text editor's copy and paste are unaffected.
+
 ### Flowchart
 
 | Gesture | Effect |

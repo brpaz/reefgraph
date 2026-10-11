@@ -202,6 +202,23 @@ impl Flowchart {
         id
     }
 
+    /// Adds a copy of `node` at `pos` under the next free id, returning it.
+    /// A label that just repeats the id follows the new id.
+    pub fn paste_node(&mut self, node: &Node, pos: Point) -> String {
+        let id = self.next_id();
+        self.nodes.push(Node {
+            label: if node.label == node.id {
+                id.clone()
+            } else {
+                node.label.clone()
+            },
+            id: id.clone(),
+            pos: Some(pos),
+            ..node.clone()
+        });
+        id
+    }
+
     pub fn remove_node(&mut self, id: &str) {
         self.nodes.retain(|n| n.id != id);
         self.edges.retain(|e| e.from != id && e.to != id);
@@ -264,6 +281,30 @@ mod tests {
             chart.ensure_node(&c.to_string());
         }
         assert_eq!(chart.next_id(), "N1");
+    }
+
+    #[test]
+    fn paste_node_copies_under_new_id() {
+        let mut chart = Flowchart::default();
+        let mut start = Node::new("A");
+        start.shape = NodeShape::Circle;
+        start.class = Some("hot".into());
+        let plain = Node::new("B");
+        chart.nodes.push(start.clone());
+        chart.nodes.push(plain.clone());
+
+        let id = chart.paste_node(&start, Point::new(5.0, 5.0));
+        assert_eq!(id, "C");
+        let copy = chart.node("C").unwrap();
+        assert_eq!(copy.label, "C");
+        assert_eq!(copy.shape, NodeShape::Circle);
+        assert_eq!(copy.class.as_deref(), Some("hot"));
+        assert_eq!(copy.pos, Some(Point::new(5.0, 5.0)));
+
+        chart.node_mut("A").unwrap().label = "Start".into();
+        let labelled = chart.node("A").unwrap().clone();
+        let id = chart.paste_node(&labelled, Point::new(0.0, 0.0));
+        assert_eq!(chart.node(&id).unwrap().label, "Start");
     }
 
     #[test]

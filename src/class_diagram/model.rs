@@ -238,6 +238,23 @@ impl ClassDiagram {
         id
     }
 
+    /// Adds a copy of `class` at `pos` under a numbered variant of its id,
+    /// returning the new id. A label that just repeats the id follows it.
+    pub fn paste_class(&mut self, class: &Class, pos: Point) -> String {
+        let id = ids::copy_id(&class.id, |id| self.class(id).is_some());
+        self.classes.push(Class {
+            label: if class.label == class.id {
+                id.clone()
+            } else {
+                class.label.clone()
+            },
+            id: id.clone(),
+            pos: Some(pos),
+            ..class.clone()
+        });
+        id
+    }
+
     pub fn remove_class(&mut self, id: &str) {
         self.classes.retain(|c| c.id != id);
         self.relations.retain(|r| r.from != id && r.to != id);
@@ -285,6 +302,23 @@ impl ClassDiagram {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn paste_class_copies_members_under_new_id() {
+        let mut diagram = ClassDiagram::default();
+        let mut order = Class::new("Order");
+        order.annotations = vec!["interface".into()];
+        order.members = vec![Member("+total() int".into())];
+        diagram.classes.push(order.clone());
+
+        let id = diagram.paste_class(&order, Point::new(1.0, 2.0));
+        assert_eq!(id, "Order2");
+        let copy = diagram.class("Order2").unwrap();
+        assert_eq!(copy.label, "Order2");
+        assert_eq!(copy.members, order.members);
+        assert_eq!(copy.annotations, order.annotations);
+        assert_eq!(copy.pos, Some(Point::new(1.0, 2.0)));
+    }
 
     #[test]
     fn displays_generics() {

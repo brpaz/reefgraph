@@ -103,6 +103,11 @@ impl BoxDiagram for Erd {
         Some(self.add_entity(preset.attributes(), at))
     }
 
+    fn paste_box(&mut self, from: &dyn BoxDiagram, id: &str, at: Point) -> Option<String> {
+        let copied = from.as_any().downcast_ref::<Erd>()?.entity(id)?.clone();
+        Some(self.paste_entity(&copied, at))
+    }
+
     fn remove_box(&mut self, id: &str) {
         self.remove_entity(id);
     }

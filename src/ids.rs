@@ -37,6 +37,17 @@ pub fn next_free_id(taken: impl Fn(&str) -> bool) -> String {
         .expect("id sequence is infinite")
 }
 
+/// Id for a copy of `id`: its stem without trailing digits followed by the
+/// first free number from 2, so `Order` and `Order2` both copy to `Order3`
+/// when `Order2` is taken.
+pub fn copy_id(id: &str, taken: impl Fn(&str) -> bool) -> String {
+    let stem = id.trim_end_matches(|c: char| c.is_ascii_digit());
+    (2..)
+        .map(|i| format!("{stem}{i}"))
+        .find(|id| !taken(id))
+        .expect("id sequence is infinite")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -53,5 +64,12 @@ mod tests {
     fn finds_next_free_id() {
         assert_eq!(next_free_id(|id| id == "A"), "B");
         assert_eq!(next_free_id(|id| id.len() == 1), "N1");
+    }
+
+    #[test]
+    fn numbers_copy_ids() {
+        assert_eq!(copy_id("Order", |_| false), "Order2");
+        assert_eq!(copy_id("Order2", |id| id == "Order2"), "Order3");
+        assert_eq!(copy_id("ENTITY_2", |id| id == "ENTITY_2"), "ENTITY_3");
     }
 }

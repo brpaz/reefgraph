@@ -104,6 +104,15 @@ impl BoxDiagram for ClassDiagram {
         Some(self.add_class(preset.annotations(), at))
     }
 
+    fn paste_box(&mut self, from: &dyn BoxDiagram, id: &str, at: Point) -> Option<String> {
+        let copied = from
+            .as_any()
+            .downcast_ref::<ClassDiagram>()?
+            .class(id)?
+            .clone();
+        Some(self.paste_class(&copied, at))
+    }
+
     fn remove_box(&mut self, id: &str) {
         self.remove_class(id);
     }
