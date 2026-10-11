@@ -1,0 +1,167 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MermanClassInspector: Adw.Bin {
+  child: Stack stack {
+    transition-type: crossfade;
+    vhomogeneous: false;
+
+    StackPage {
+      name: "diagram";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Class Diagram");
+          description: _("Drag from a class's handles to relate it to another. Double-click a member to edit it, for example: +deposit(amount) bool or -int balance$.");
+
+          Adw.ComboRow direction_row {
+            title: _("Direction");
+          }
+
+          Adw.ActionRow {
+            title: _("Auto Layout");
+            subtitle: _("Discard manual positions");
+            activatable-widget: layout_button;
+
+            [suffix]
+            Button layout_button {
+              label: _("Arrange");
+              valign: center;
+            }
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "class";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Class");
+
+          Adw.EntryRow class_name_row {
+            title: _("Name");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow class_label_row {
+            title: _("Display Name");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow class_generic_row {
+            title: _("Type Parameters");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow class_annotations_row {
+            title: _("Stereotypes (comma separated)");
+            show-apply-button: true;
+          }
+        }
+
+        Adw.PreferencesGroup members_group {
+          title: _("Members");
+          description: _("Methods contain parentheses. End with $ for static, * for abstract.");
+
+          header-suffix: Button add_member_button {
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Add Member");
+            valign: center;
+
+            styles [
+              "flat",
+            ]
+          };
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_class_button {
+            label: _("Delete Class");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "relation";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Relation");
+
+          Adw.EntryRow relation_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow relation_from_row {
+            title: _("From");
+          }
+
+          Adw.ComboRow relation_from_head_row {
+            title: _("From End");
+          }
+
+          Adw.EntryRow relation_from_cardinality_row {
+            title: _("From Cardinality");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow relation_to_row {
+            title: _("To");
+          }
+
+          Adw.ComboRow relation_to_head_row {
+            title: _("To End");
+          }
+
+          Adw.EntryRow relation_to_cardinality_row {
+            title: _("To Cardinality");
+            show-apply-button: true;
+          }
+
+          Adw.SwitchRow relation_dashed_row {
+            title: _("Dashed Line");
+            subtitle: _("Dependency or realization");
+          }
+
+          Adw.ActionRow {
+            title: _("Reverse Direction");
+            activatable-widget: reverse_button;
+
+            [suffix]
+            Button reverse_button {
+              icon-name: "object-flip-horizontal-symbolic";
+              tooltip-text: _("Reverse Direction");
+              valign: center;
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_relation_button {
+            label: _("Delete Relation");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+  };
+}

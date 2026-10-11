@@ -13,7 +13,9 @@ use crate::diagram::{self, Diagram, DiagramKind};
 use crate::flowchart::{self, NodeShape};
 use crate::interaction::Navigable;
 use crate::palette::Palette;
-use crate::{erd, erd_editor, flowchart_editor, sequence, sequence_editor};
+use crate::{
+    class_diagram, class_editor, erd, erd_editor, flowchart_editor, sequence, sequence_editor,
+};
 
 const SAMPLE_DIAGRAM: &str = "flowchart TD
     A[Start] --> B{Is it working?}
@@ -45,6 +47,8 @@ mod imp {
         #[template_child]
         pub erd_canvas: TemplateChild<erd_editor::Canvas>,
         #[template_child]
+        pub class_canvas: TemplateChild<class_editor::Canvas>,
+        #[template_child]
         pub inspector_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub flowchart_inspector: TemplateChild<flowchart_editor::Inspector>,
@@ -52,6 +56,8 @@ mod imp {
         pub sequence_inspector: TemplateChild<sequence_editor::Inspector>,
         #[template_child]
         pub erd_inspector: TemplateChild<erd_editor::Inspector>,
+        #[template_child]
+        pub class_inspector: TemplateChild<class_editor::Inspector>,
         #[template_child]
         pub error_banner: TemplateChild<adw::Banner>,
         #[template_child]
@@ -77,10 +83,12 @@ mod imp {
                 flowchart_canvas: TemplateChild::default(),
                 sequence_canvas: TemplateChild::default(),
                 erd_canvas: TemplateChild::default(),
+                class_canvas: TemplateChild::default(),
                 inspector_stack: TemplateChild::default(),
                 flowchart_inspector: TemplateChild::default(),
                 sequence_inspector: TemplateChild::default(),
                 erd_inspector: TemplateChild::default(),
+                class_inspector: TemplateChild::default(),
                 error_banner: TemplateChild::default(),
                 source_scroller: TemplateChild::default(),
                 buffer: sourceview5::Buffer::new(None),
@@ -107,6 +115,8 @@ mod imp {
             sequence_editor::Inspector::ensure_type();
             erd_editor::Canvas::ensure_type();
             erd_editor::Inspector::ensure_type();
+            class_editor::Canvas::ensure_type();
+            class_editor::Inspector::ensure_type();
             Palette::ensure_type();
             klass.bind_template();
         }
@@ -221,6 +231,9 @@ impl MermanApplicationWindow {
             gio::ActionEntry::builder("new-sequence")
                 .activate(|win: &Self, _, _| win.spawn_new_document(DiagramKind::Sequence))
                 .build(),
+            gio::ActionEntry::builder("new-class")
+                .activate(|win: &Self, _, _| win.spawn_new_document(DiagramKind::Class))
+                .build(),
             gio::ActionEntry::builder("new-erd")
                 .activate(|win: &Self, _, _| win.spawn_new_document(DiagramKind::Erd))
                 .build(),
@@ -270,6 +283,7 @@ impl MermanApplicationWindow {
         imp.flowchart_inspector.set_canvas(&imp.flowchart_canvas);
         imp.sequence_inspector.set_canvas(&imp.sequence_canvas);
         imp.erd_inspector.set_canvas(&imp.erd_canvas);
+        imp.class_inspector.set_canvas(&imp.class_canvas);
 
         imp.palette.connect_local(
             "item-activated",
@@ -287,10 +301,11 @@ impl MermanApplicationWindow {
             ),
         );
 
-        let canvases: [&gtk::Widget; 3] = [
+        let canvases: [&gtk::Widget; 4] = [
             imp.flowchart_canvas.upcast_ref(),
             imp.sequence_canvas.upcast_ref(),
             imp.erd_canvas.upcast_ref(),
+            imp.class_canvas.upcast_ref(),
         ];
         for canvas in canvases {
             canvas.connect_local(
@@ -334,6 +349,7 @@ impl MermanApplicationWindow {
             DiagramKind::Flowchart => ("flowchart", flowchart_editor::palette_items()),
             DiagramKind::Sequence => ("sequence", sequence_editor::palette_items()),
             DiagramKind::Erd => ("erd", erd_editor::palette_items()),
+            DiagramKind::Class => ("class", class_editor::palette_items()),
         };
         imp.editor_stack.set_visible_child_name(page);
         imp.inspector_stack.set_visible_child_name(page);
@@ -347,6 +363,7 @@ impl MermanApplicationWindow {
             DiagramKind::Flowchart => zoom_canvas(&*imp.flowchart_canvas, zoom_in),
             DiagramKind::Sequence => zoom_canvas(&*imp.sequence_canvas, zoom_in),
             DiagramKind::Erd => zoom_canvas(&*imp.erd_canvas, zoom_in),
+            DiagramKind::Class => zoom_canvas(&*imp.class_canvas, zoom_in),
         }
     }
 
@@ -356,6 +373,7 @@ impl MermanApplicationWindow {
             DiagramKind::Flowchart => imp.flowchart_canvas.undo(),
             DiagramKind::Sequence => imp.sequence_canvas.undo(),
             DiagramKind::Erd => imp.erd_canvas.undo(),
+            DiagramKind::Class => imp.class_canvas.undo(),
         }
     }
 
@@ -365,6 +383,7 @@ impl MermanApplicationWindow {
             DiagramKind::Flowchart => imp.flowchart_canvas.redo(),
             DiagramKind::Sequence => imp.sequence_canvas.redo(),
             DiagramKind::Erd => imp.erd_canvas.redo(),
+            DiagramKind::Class => imp.class_canvas.redo(),
         }
     }
 
@@ -374,6 +393,7 @@ impl MermanApplicationWindow {
             DiagramKind::Flowchart => imp.flowchart_canvas.fit_to_content(),
             DiagramKind::Sequence => imp.sequence_canvas.fit_to_content(),
             DiagramKind::Erd => imp.erd_canvas.fit_to_content(),
+            DiagramKind::Class => imp.class_canvas.fit_to_content(),
         }
     }
 
@@ -395,6 +415,11 @@ impl MermanApplicationWindow {
                     imp.erd_canvas.add_entity_at_center(preset.attributes());
                 }
             }
+            DiagramKind::Class => {
+                if let Some(preset) = class_editor::ClassPreset::from_id(id) {
+                    imp.class_canvas.add_class_at_center(preset.annotations());
+                }
+            }
         }
     }
 
@@ -410,6 +435,7 @@ impl MermanApplicationWindow {
                 imp.sequence_canvas.can_redo(),
             ),
             DiagramKind::Erd => (imp.erd_canvas.can_undo(), imp.erd_canvas.can_redo()),
+            DiagramKind::Class => (imp.class_canvas.can_undo(), imp.class_canvas.can_redo()),
         };
         for (name, enabled) in [("undo", can_undo), ("redo", can_redo)] {
             if let Some(action) = self.lookup_action(name).and_downcast::<gio::SimpleAction>() {
@@ -490,6 +516,7 @@ impl MermanApplicationWindow {
             Diagram::Flowchart(chart) => imp.flowchart_canvas.set_chart(chart),
             Diagram::Sequence(seq) => imp.sequence_canvas.set_sequence(seq),
             Diagram::Erd(erd) => imp.erd_canvas.set_erd(erd),
+            Diagram::Class(diagram) => imp.class_canvas.set_diagram(diagram),
         }
     }
 
@@ -501,6 +528,7 @@ impl MermanApplicationWindow {
             Diagram::Flowchart(chart) => imp.flowchart_canvas.load_chart(chart),
             Diagram::Sequence(seq) => imp.sequence_canvas.load_sequence(seq),
             Diagram::Erd(erd) => imp.erd_canvas.load_erd(erd),
+            Diagram::Class(diagram) => imp.class_canvas.load_diagram(diagram),
         }
     }
 
@@ -511,6 +539,7 @@ impl MermanApplicationWindow {
             DiagramKind::Flowchart => imp.flowchart_canvas.with_chart(flowchart::serialize),
             DiagramKind::Sequence => imp.sequence_canvas.with_sequence(sequence::serialize),
             DiagramKind::Erd => imp.erd_canvas.with_erd(erd::serialize),
+            DiagramKind::Class => imp.class_canvas.with_diagram(class_diagram::serialize),
         };
         if text == self.source_text() {
             return;

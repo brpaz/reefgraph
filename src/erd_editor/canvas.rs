@@ -446,7 +446,7 @@ impl Canvas {
 
     fn on_add_button(&self, p: Point) -> bool {
         self.add_button_center().is_some_and(|c| {
-            (c.x - p.x).hypot(c.y - p.y) <= render::ADD_BUTTON_RADIUS / self.zoom()
+            (c.x - p.x).hypot(c.y - p.y) <= drawing::ADD_BUTTON_RADIUS / self.zoom()
         })
     }
 
@@ -579,7 +579,7 @@ impl Canvas {
                     }
                 }
                 if let Some(center) = self.add_button_center() {
-                    log_draw_error(render::draw_add_button(&cr, center, zoom, &colors));
+                    log_draw_error(drawing::draw_add_button(&cr, center, zoom, &colors));
                 }
             }
             _ => {}

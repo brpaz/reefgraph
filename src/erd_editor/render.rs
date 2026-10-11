@@ -10,7 +10,6 @@ use crate::geometry::{Point, Rect};
 /// Half length of cardinality bars and crow's feet across the line.
 const MARKER_SPREAD: f64 = 7.0;
 const MARKER_CIRCLE: f64 = 5.0;
-pub const ADD_BUTTON_RADIUS: f64 = 9.0;
 
 pub fn draw_entity(
     cr: &cairo::Context,
@@ -157,27 +156,6 @@ fn draw_cardinality(
         cr.stroke()?;
     }
     Ok(())
-}
-
-/// Round "+" button for adding an attribute to the selected entity.
-pub fn draw_add_button(
-    cr: &cairo::Context,
-    center: Point,
-    zoom: f64,
-    colors: &Colors,
-) -> Result<(), cairo::Error> {
-    let r = ADD_BUTTON_RADIUS / zoom;
-    circle(cr, center, r);
-    set_color(cr, &colors.accent);
-    cr.fill()?;
-    set_color(cr, &colors.node_fill);
-    cr.set_line_width(2.0 / zoom);
-    let s = r * 0.5;
-    cr.move_to(center.x - s, center.y);
-    cr.line_to(center.x + s, center.y);
-    cr.move_to(center.x, center.y - s);
-    cr.line_to(center.x, center.y + s);
-    cr.stroke()
 }
 
 #[cfg(test)]

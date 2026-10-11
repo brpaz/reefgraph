@@ -1,13 +1,14 @@
 //! Diagram types the editor supports, detected from the source declaration.
 
 use crate::syntax::{ParseError, split_source};
-use crate::{erd, flowchart, sequence};
+use crate::{class_diagram, erd, flowchart, sequence};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Diagram {
     Flowchart(flowchart::Flowchart),
     Sequence(sequence::Sequence),
     Erd(erd::Erd),
+    Class(class_diagram::ClassDiagram),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,6 +16,7 @@ pub enum DiagramKind {
     Flowchart,
     Sequence,
     Erd,
+    Class,
 }
 
 impl DiagramKind {
@@ -24,6 +26,7 @@ impl DiagramKind {
             DiagramKind::Flowchart => "flowchart TD\n",
             DiagramKind::Sequence => "sequenceDiagram\n",
             DiagramKind::Erd => "erDiagram\n",
+            DiagramKind::Class => "classDiagram\n",
         }
     }
 }
@@ -34,10 +37,13 @@ pub fn parse(src: &str) -> Result<Diagram, ParseError> {
         "flowchart" | "graph" => flowchart::parse(src).map(Diagram::Flowchart),
         sequence::parser::KEYWORD => sequence::parse(src).map(Diagram::Sequence),
         erd::parser::KEYWORD => erd::parse(src).map(Diagram::Erd),
+        class_diagram::parser::KEYWORD | class_diagram::parser::KEYWORD_V2 => {
+            class_diagram::parse(src).map(Diagram::Class)
+        }
         other => Err(ParseError::new(
             source.header.0,
             format!(
-                "`{other}` diagrams are not supported; use `flowchart`, `sequenceDiagram` or `erDiagram`"
+                "`{other}` diagrams are not supported; use `flowchart`, `sequenceDiagram`, `classDiagram` or `erDiagram`"
             ),
         )),
     }
@@ -49,6 +55,7 @@ impl Diagram {
             Diagram::Flowchart(_) => DiagramKind::Flowchart,
             Diagram::Sequence(_) => DiagramKind::Sequence,
             Diagram::Erd(_) => DiagramKind::Erd,
+            Diagram::Class(_) => DiagramKind::Class,
         }
     }
 }
@@ -78,6 +85,7 @@ mod tests {
             DiagramKind::Flowchart,
             DiagramKind::Sequence,
             DiagramKind::Erd,
+            DiagramKind::Class,
         ] {
             assert_eq!(parse(kind.template()).unwrap().kind(), kind);
         }

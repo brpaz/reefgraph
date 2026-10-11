@@ -8,6 +8,7 @@
     <file compressed="true" preprocess="xml-stripblanks">ui/flowchart-inspector.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/sequence-inspector.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/erd-inspector.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/class-inspector.ui</file>
     <file compressed="true">style.css</file>
   </gresource>
 </gresources>

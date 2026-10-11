@@ -11,6 +11,8 @@ use crate::viewport::Viewport;
 const GRID_SPACING: f64 = 20.0;
 /// Width at which labels wrap, in canvas units.
 const MAX_LABEL_WIDTH: i32 = 200;
+/// Screen-space radius of the add-row button.
+pub const ADD_BUTTON_RADIUS: f64 = 9.0;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Colors {
@@ -95,6 +97,24 @@ pub fn label_layout(widget: &impl IsA<gtk::Widget>, text: &str) -> pango::Layout
     layout.set_wrap(pango::WrapMode::WordChar);
     layout.set_alignment(pango::Alignment::Center);
     layout
+}
+
+/// Applies font styles to the whole text of `layout`.
+pub fn apply_style(layout: &pango::Layout, bold: bool, italic: bool, underline: bool) {
+    if !(bold || italic || underline) {
+        return;
+    }
+    let attrs = pango::AttrList::new();
+    if bold {
+        attrs.insert(pango::AttrInt::new_weight(pango::Weight::Bold));
+    }
+    if italic {
+        attrs.insert(pango::AttrInt::new_style(pango::Style::Italic));
+    }
+    if underline {
+        attrs.insert(pango::AttrInt::new_underline(pango::Underline::Single));
+    }
+    layout.set_attributes(Some(&attrs));
 }
 
 pub fn layout_size(layout: &pango::Layout) -> (f64, f64) {
@@ -199,4 +219,25 @@ pub fn draw_rubber_band(
     cr.stroke()?;
     cr.set_dash(&[], 0.0);
     Ok(())
+}
+
+/// Round "+" button shown under a selected box for adding a row to it.
+pub fn draw_add_button(
+    cr: &cairo::Context,
+    center: Point,
+    zoom: f64,
+    colors: &Colors,
+) -> Result<(), cairo::Error> {
+    let r = ADD_BUTTON_RADIUS / zoom;
+    circle(cr, center, r);
+    set_color(cr, &colors.accent);
+    cr.fill()?;
+    set_color(cr, &colors.node_fill);
+    cr.set_line_width(2.0 / zoom);
+    let s = r * 0.5;
+    cr.move_to(center.x - s, center.y);
+    cr.line_to(center.x + s, center.y);
+    cr.move_to(center.x, center.y - s);
+    cr.line_to(center.x, center.y + s);
+    cr.stroke()
 }

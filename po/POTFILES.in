@@ -1,12 +1,15 @@
 data/dev.brunopaz.Merman.desktop.in.in
 data/dev.brunopaz.Merman.gschema.xml.in
 data/dev.brunopaz.Merman.metainfo.xml.in.in
+data/resources/ui/class-inspector.blp
 data/resources/ui/erd-inspector.blp
 data/resources/ui/flowchart-inspector.blp
 data/resources/ui/sequence-inspector.blp
 data/resources/ui/shortcuts.blp
 data/resources/ui/window.blp
 src/application.rs
+src/class_editor/inspector.rs
+src/class_editor/mod.rs
 src/erd_editor/inspector.rs
 src/erd_editor/mod.rs
 src/sequence_editor/inspector.rs

@@ -2,6 +2,7 @@
 
 use gettextrs::gettext;
 
+use crate::class_diagram::Head as ClassHead;
 use crate::erd::Cardinality;
 use crate::flowchart::{Direction, Head, NodeShape, Stroke};
 use crate::sequence::{ArrowHead, BlockKind, LineStyle, NotePlacement, ParticipantKind};
@@ -100,5 +101,16 @@ pub fn cardinality(cardinality: Cardinality) -> String {
         Cardinality::ExactlyOne => "Exactly one",
         Cardinality::ZeroOrMore => "Zero or more",
         Cardinality::OneOrMore => "One or more",
+    })
+}
+
+pub fn class_head(head: ClassHead) -> String {
+    gettext(match head {
+        ClassHead::None => "None",
+        ClassHead::Inheritance => "Inheritance",
+        ClassHead::Composition => "Composition",
+        ClassHead::Aggregation => "Aggregation",
+        ClassHead::Arrow => "Arrow",
+        ClassHead::Lollipop => "Interface (lollipop)",
     })
 }

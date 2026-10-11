@@ -1,4 +1,6 @@
 mod application;
+mod class_diagram;
+mod class_editor;
 mod combo;
 mod config;
 mod diagram;
