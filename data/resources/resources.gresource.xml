@@ -9,6 +9,10 @@
     <file compressed="true" preprocess="xml-stripblanks">ui/sequence-inspector.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/erd-inspector.ui</file>
     <file compressed="true" preprocess="xml-stripblanks">ui/class-inspector.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/c4-inspector.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/state-inspector.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/usecase-inspector.ui</file>
+    <file compressed="true" preprocess="xml-stripblanks">ui/mindmap-inspector.ui</file>
     <file compressed="true">style.css</file>
   </gresource>
 </gresources>

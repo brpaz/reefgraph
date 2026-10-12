@@ -10,7 +10,7 @@ use sourceview5::prelude::*;
 use crate::application::MermanApplication;
 use crate::box_canvas::BoxCanvas;
 use crate::config::{APP_ID, PROFILE};
-use crate::diagram::{self, Diagram, DiagramKind};
+use crate::diagram::{self, Diagram, DiagramKind, ForCanvas};
 use crate::export::{self, ExportError, ImageFormat};
 use crate::flowchart::{self, NodeShape};
 use crate::interaction::Navigable;
@@ -19,7 +19,8 @@ use crate::markdown::{self, Embedding};
 use crate::new_diagram;
 use crate::palette::Palette;
 use crate::{
-    class_diagram, class_editor, erd, erd_editor, flowchart_editor, sequence, sequence_editor,
+    c4, c4_editor, class_diagram, class_editor, erd, erd_editor, flowchart_editor, mindmap,
+    mindmap_editor, sequence, sequence_editor, state, state_editor, usecase, usecase_editor,
 };
 
 /// Pause after the last keystroke before the source is re-parsed.
@@ -44,9 +45,17 @@ mod imp {
         #[template_child]
         pub sequence_canvas: TemplateChild<sequence_editor::Canvas>,
         #[template_child]
+        pub state_canvas: TemplateChild<BoxCanvas>,
+        #[template_child]
+        pub usecase_canvas: TemplateChild<BoxCanvas>,
+        #[template_child]
+        pub mindmap_canvas: TemplateChild<BoxCanvas>,
+        #[template_child]
         pub erd_canvas: TemplateChild<BoxCanvas>,
         #[template_child]
         pub class_canvas: TemplateChild<BoxCanvas>,
+        #[template_child]
+        pub c4_canvas: TemplateChild<BoxCanvas>,
         #[template_child]
         pub inspector_stack: TemplateChild<gtk::Stack>,
         #[template_child]
@@ -54,9 +63,17 @@ mod imp {
         #[template_child]
         pub sequence_inspector: TemplateChild<sequence_editor::Inspector>,
         #[template_child]
+        pub state_inspector: TemplateChild<state_editor::Inspector>,
+        #[template_child]
+        pub usecase_inspector: TemplateChild<usecase_editor::Inspector>,
+        #[template_child]
+        pub mindmap_inspector: TemplateChild<mindmap_editor::Inspector>,
+        #[template_child]
         pub erd_inspector: TemplateChild<erd_editor::Inspector>,
         #[template_child]
         pub class_inspector: TemplateChild<class_editor::Inspector>,
+        #[template_child]
+        pub c4_inspector: TemplateChild<c4_editor::Inspector>,
         #[template_child]
         pub error_banner: TemplateChild<adw::Banner>,
         #[template_child]
@@ -84,13 +101,21 @@ mod imp {
                 editor_stack: TemplateChild::default(),
                 flowchart_canvas: TemplateChild::default(),
                 sequence_canvas: TemplateChild::default(),
+                state_canvas: TemplateChild::default(),
+                usecase_canvas: TemplateChild::default(),
+                mindmap_canvas: TemplateChild::default(),
                 erd_canvas: TemplateChild::default(),
                 class_canvas: TemplateChild::default(),
+                c4_canvas: TemplateChild::default(),
                 inspector_stack: TemplateChild::default(),
                 flowchart_inspector: TemplateChild::default(),
                 sequence_inspector: TemplateChild::default(),
+                state_inspector: TemplateChild::default(),
+                usecase_inspector: TemplateChild::default(),
+                mindmap_inspector: TemplateChild::default(),
                 erd_inspector: TemplateChild::default(),
                 class_inspector: TemplateChild::default(),
+                c4_inspector: TemplateChild::default(),
                 error_banner: TemplateChild::default(),
                 source_scroller: TemplateChild::default(),
                 buffer: sourceview5::Buffer::new(None),
@@ -117,8 +142,12 @@ mod imp {
             sequence_editor::Canvas::ensure_type();
             sequence_editor::Inspector::ensure_type();
             BoxCanvas::ensure_type();
+            state_editor::Inspector::ensure_type();
+            usecase_editor::Inspector::ensure_type();
+            mindmap_editor::Inspector::ensure_type();
             erd_editor::Inspector::ensure_type();
             class_editor::Inspector::ensure_type();
+            c4_editor::Inspector::ensure_type();
             Palette::ensure_type();
             klass.bind_template();
         }
@@ -293,8 +322,12 @@ impl MermanApplicationWindow {
         let imp = self.imp();
         imp.flowchart_inspector.set_canvas(&imp.flowchart_canvas);
         imp.sequence_inspector.set_canvas(&imp.sequence_canvas);
+        imp.state_inspector.set_canvas(&imp.state_canvas);
+        imp.usecase_inspector.set_canvas(&imp.usecase_canvas);
+        imp.mindmap_inspector.set_canvas(&imp.mindmap_canvas);
         imp.erd_inspector.set_canvas(&imp.erd_canvas);
         imp.class_inspector.set_canvas(&imp.class_canvas);
+        imp.c4_inspector.set_canvas(&imp.c4_canvas);
 
         imp.palette.connect_local(
             "item-activated",
@@ -312,11 +345,15 @@ impl MermanApplicationWindow {
             ),
         );
 
-        let canvases: [&gtk::Widget; 4] = [
+        let canvases: [&gtk::Widget; 8] = [
             imp.flowchart_canvas.upcast_ref(),
             imp.sequence_canvas.upcast_ref(),
+            imp.state_canvas.upcast_ref(),
+            imp.usecase_canvas.upcast_ref(),
+            imp.mindmap_canvas.upcast_ref(),
             imp.erd_canvas.upcast_ref(),
             imp.class_canvas.upcast_ref(),
+            imp.c4_canvas.upcast_ref(),
         ];
         for canvas in canvases {
             canvas.connect_local(
@@ -359,8 +396,12 @@ impl MermanApplicationWindow {
         let (page, items) = match kind {
             DiagramKind::Flowchart => ("flowchart", flowchart_editor::palette_items()),
             DiagramKind::Sequence => ("sequence", sequence_editor::palette_items()),
+            DiagramKind::State => ("state", state_editor::palette_items()),
+            DiagramKind::UseCase => ("usecase", usecase_editor::palette_items()),
+            DiagramKind::Mindmap => ("mindmap", mindmap_editor::palette_items()),
             DiagramKind::Erd => ("erd", erd_editor::palette_items()),
             DiagramKind::Class => ("class", class_editor::palette_items()),
+            DiagramKind::C4 => ("c4", c4_editor::palette_items()),
         };
         imp.editor_stack.set_visible_child_name(page);
         imp.inspector_stack.set_visible_child_name(page);
@@ -373,8 +414,11 @@ impl MermanApplicationWindow {
         match imp.kind.get() {
             DiagramKind::Flowchart => zoom_canvas(&*imp.flowchart_canvas, zoom_in),
             DiagramKind::Sequence => zoom_canvas(&*imp.sequence_canvas, zoom_in),
-            DiagramKind::Erd => zoom_canvas(&*imp.erd_canvas, zoom_in),
-            DiagramKind::Class => zoom_canvas(&*imp.class_canvas, zoom_in),
+            kind => {
+                if let Some(canvas) = self.box_canvas(kind) {
+                    zoom_canvas(canvas, zoom_in);
+                }
+            }
         }
     }
 
@@ -383,8 +427,11 @@ impl MermanApplicationWindow {
         match imp.kind.get() {
             DiagramKind::Flowchart => imp.flowchart_canvas.undo(),
             DiagramKind::Sequence => imp.sequence_canvas.undo(),
-            DiagramKind::Erd => imp.erd_canvas.undo(),
-            DiagramKind::Class => imp.class_canvas.undo(),
+            kind => {
+                if let Some(canvas) = self.box_canvas(kind) {
+                    canvas.undo();
+                }
+            }
         }
     }
 
@@ -393,8 +440,11 @@ impl MermanApplicationWindow {
         match imp.kind.get() {
             DiagramKind::Flowchart => imp.flowchart_canvas.redo(),
             DiagramKind::Sequence => imp.sequence_canvas.redo(),
-            DiagramKind::Erd => imp.erd_canvas.redo(),
-            DiagramKind::Class => imp.class_canvas.redo(),
+            kind => {
+                if let Some(canvas) = self.box_canvas(kind) {
+                    canvas.redo();
+                }
+            }
         }
     }
 
@@ -403,8 +453,11 @@ impl MermanApplicationWindow {
         match imp.kind.get() {
             DiagramKind::Flowchart => imp.flowchart_canvas.fit_to_content(),
             DiagramKind::Sequence => imp.sequence_canvas.fit_to_content(),
-            DiagramKind::Erd => imp.erd_canvas.fit_to_content(),
-            DiagramKind::Class => imp.class_canvas.fit_to_content(),
+            kind => {
+                if let Some(canvas) = self.box_canvas(kind) {
+                    canvas.fit_to_content();
+                }
+            }
         }
     }
 
@@ -421,13 +474,27 @@ impl MermanApplicationWindow {
                     imp.sequence_canvas.add_element(element, None);
                 }
             }
-            DiagramKind::Erd => {
-                imp.erd_canvas.add_box(id, None);
-            }
-            DiagramKind::Class => {
-                imp.class_canvas.add_box(id, None);
+            kind => {
+                if let Some(canvas) = self.box_canvas(kind) {
+                    canvas.add_box(id, None);
+                }
             }
         }
+    }
+
+    /// The box canvas editing diagrams of `kind`, if they use one.
+    fn box_canvas(&self, kind: DiagramKind) -> Option<&BoxCanvas> {
+        let imp = self.imp();
+        let canvas = match kind {
+            DiagramKind::Flowchart | DiagramKind::Sequence => return None,
+            DiagramKind::State => &imp.state_canvas,
+            DiagramKind::UseCase => &imp.usecase_canvas,
+            DiagramKind::Mindmap => &imp.mindmap_canvas,
+            DiagramKind::Erd => &imp.erd_canvas,
+            DiagramKind::Class => &imp.class_canvas,
+            DiagramKind::C4 => &imp.c4_canvas,
+        };
+        Some(canvas)
     }
 
     fn update_history_actions(&self) {
@@ -441,8 +508,9 @@ impl MermanApplicationWindow {
                 imp.sequence_canvas.can_undo(),
                 imp.sequence_canvas.can_redo(),
             ),
-            DiagramKind::Erd => (imp.erd_canvas.can_undo(), imp.erd_canvas.can_redo()),
-            DiagramKind::Class => (imp.class_canvas.can_undo(), imp.class_canvas.can_redo()),
+            kind => self
+                .box_canvas(kind)
+                .map_or((false, false), |c| (c.can_undo(), c.can_redo())),
         };
         for (name, enabled) in [("undo", can_undo), ("redo", can_redo)] {
             if let Some(action) = self.lookup_action(name).and_downcast::<gio::SimpleAction>() {
@@ -519,23 +587,31 @@ impl MermanApplicationWindow {
 
     fn update_canvas(&self, diagram: Diagram) {
         let imp = self.imp();
-        match diagram {
-            Diagram::Flowchart(chart) => imp.flowchart_canvas.set_chart(chart),
-            Diagram::Sequence(seq) => imp.sequence_canvas.set_sequence(seq),
-            Diagram::Erd(erd) => imp.erd_canvas.set_diagram(Box::new(erd)),
-            Diagram::Class(diagram) => imp.class_canvas.set_diagram(Box::new(diagram)),
+        let kind = diagram.kind();
+        match diagram.for_canvas() {
+            ForCanvas::Flowchart(chart) => imp.flowchart_canvas.set_chart(chart),
+            ForCanvas::Sequence(seq) => imp.sequence_canvas.set_sequence(seq),
+            ForCanvas::Boxes(boxes) => {
+                if let Some(canvas) = self.box_canvas(kind) {
+                    canvas.set_diagram(boxes);
+                }
+            }
         }
     }
 
     /// Shows the diagram in its editor with fresh undo history and viewport.
     fn load_diagram(&self, diagram: Diagram) {
         let imp = self.imp();
-        self.show_kind(diagram.kind());
-        match diagram {
-            Diagram::Flowchart(chart) => imp.flowchart_canvas.load_chart(chart),
-            Diagram::Sequence(seq) => imp.sequence_canvas.load_sequence(seq),
-            Diagram::Erd(erd) => imp.erd_canvas.load_diagram(Box::new(erd)),
-            Diagram::Class(diagram) => imp.class_canvas.load_diagram(Box::new(diagram)),
+        let kind = diagram.kind();
+        self.show_kind(kind);
+        match diagram.for_canvas() {
+            ForCanvas::Flowchart(chart) => imp.flowchart_canvas.load_chart(chart),
+            ForCanvas::Sequence(seq) => imp.sequence_canvas.load_sequence(seq),
+            ForCanvas::Boxes(boxes) => {
+                if let Some(canvas) = self.box_canvas(kind) {
+                    canvas.load_diagram(boxes);
+                }
+            }
         }
     }
 
@@ -545,11 +621,21 @@ impl MermanApplicationWindow {
         let text = match imp.kind.get() {
             DiagramKind::Flowchart => imp.flowchart_canvas.with_chart(flowchart::serialize),
             DiagramKind::Sequence => imp.sequence_canvas.with_sequence(sequence::serialize),
+            DiagramKind::State => imp.state_canvas.with(state::serialize).unwrap_or_default(),
+            DiagramKind::UseCase => imp
+                .usecase_canvas
+                .with(usecase::serialize)
+                .unwrap_or_default(),
+            DiagramKind::Mindmap => imp
+                .mindmap_canvas
+                .with(mindmap::serialize)
+                .unwrap_or_default(),
             DiagramKind::Erd => imp.erd_canvas.with(erd::serialize).unwrap_or_default(),
             DiagramKind::Class => imp
                 .class_canvas
                 .with(class_diagram::serialize)
                 .unwrap_or_default(),
+            DiagramKind::C4 => imp.c4_canvas.with(c4::serialize).unwrap_or_default(),
         };
         if text == self.source_text() {
             return;
@@ -879,8 +965,10 @@ impl MermanApplicationWindow {
         let image = match imp.kind.get() {
             DiagramKind::Flowchart => export::render(&*imp.flowchart_canvas, format),
             DiagramKind::Sequence => export::render(&*imp.sequence_canvas, format),
-            DiagramKind::Erd => export::render(&*imp.erd_canvas, format),
-            DiagramKind::Class => export::render(&*imp.class_canvas, format),
+            kind => match self.box_canvas(kind) {
+                Some(canvas) => export::render(canvas, format),
+                None => Err(ExportError::Empty),
+            },
         };
         let image = match image {
             Ok(image) => image,

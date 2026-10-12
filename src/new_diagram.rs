@@ -9,7 +9,7 @@ use gettextrs::gettext;
 use gtk::{gdk, glib};
 
 use crate::box_canvas::BoxCanvas;
-use crate::diagram::{self, Diagram, DiagramKind};
+use crate::diagram::{self, Diagram, DiagramKind, ForCanvas};
 use crate::export::{self, ImageFormat};
 use crate::{flowchart_editor, labels, markdown, sequence_editor};
 
@@ -202,25 +202,20 @@ fn tile(
 
 /// The diagram rendered as it would be exported.
 fn preview(diagram: Diagram) -> Option<gdk::Texture> {
-    let image = match diagram {
-        Diagram::Flowchart(chart) => {
+    let image = match diagram.for_canvas() {
+        ForCanvas::Flowchart(chart) => {
             let canvas = flowchart_editor::Canvas::default();
             canvas.set_chart(chart);
             export::render(&canvas, ImageFormat::Png)
         }
-        Diagram::Sequence(seq) => {
+        ForCanvas::Sequence(seq) => {
             let canvas = sequence_editor::Canvas::default();
             canvas.set_sequence(seq);
             export::render(&canvas, ImageFormat::Png)
         }
-        Diagram::Erd(erd) => {
+        ForCanvas::Boxes(boxes) => {
             let canvas = BoxCanvas::default();
-            canvas.set_diagram(Box::new(erd));
-            export::render(&canvas, ImageFormat::Png)
-        }
-        Diagram::Class(class) => {
-            let canvas = BoxCanvas::default();
-            canvas.set_diagram(Box::new(class));
+            canvas.set_diagram(boxes);
             export::render(&canvas, ImageFormat::Png)
         }
     }

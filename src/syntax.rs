@@ -142,6 +142,41 @@ pub fn strip_editor_comments(src: &str) -> String {
         .collect()
 }
 
+/// Entity codes Mermaid uses for characters the syntax reserves.
+const ENTITIES: [(&str, &str); 7] = [
+    ("#quot;", "\""),
+    ("#39;", "'"),
+    ("#40;", "("),
+    ("#41;", ")"),
+    ("#91;", "["),
+    ("#93;", "]"),
+    ("#96;", "`"),
+];
+
+/// Text shown for a label written as plain text, a `"string"` or a
+/// "`markdown string`", with entity codes decoded.
+pub fn label_text(raw: &str) -> String {
+    let raw = raw.trim();
+    let text = raw
+        .strip_prefix('"')
+        .and_then(|r| r.strip_suffix('"'))
+        .map(|inner| {
+            inner
+                .strip_prefix('`')
+                .and_then(|r| r.strip_suffix('`'))
+                .unwrap_or(inner)
+        })
+        .unwrap_or(raw);
+    ENTITIES
+        .iter()
+        .fold(text.to_string(), |t, (code, c)| t.replace(code, c))
+}
+
+/// Quoted label for text typed by the user, so any character is allowed.
+pub fn quote_label(text: &str) -> String {
+    format!("\"{}\"", text.replace('"', "#quot;"))
+}
+
 /// Comment line storing a node position, rounded to whole units.
 pub fn position_line(id: &str, pos: Point) -> String {
     format!(
@@ -208,6 +243,17 @@ mod tests {
     fn stripping_keeps_line_endings() {
         let src = "graph TD\r\n%% @merman pos A 1 2\r\nA --> B\r\n";
         assert_eq!(strip_editor_comments(src), "graph TD\r\nA --> B\r\n");
+    }
+
+    #[test]
+    fn decodes_and_quotes_labels() {
+        assert_eq!(label_text("Sign in"), "Sign in");
+        assert_eq!(label_text("\"Sign in\""), "Sign in");
+        assert_eq!(label_text("\"`**Bold**`\""), "**Bold**");
+        assert_eq!(label_text("\"Refund #40;partial#41;\""), "Refund (partial)");
+        let quoted = quote_label("Say \"hi\"");
+        assert_eq!(quoted, "\"Say #quot;hi#quot;\"");
+        assert_eq!(label_text(&quoted), "Say \"hi\"");
     }
 
     #[test]

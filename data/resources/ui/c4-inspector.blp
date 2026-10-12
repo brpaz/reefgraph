@@ -1,0 +1,175 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MermanC4Inspector: Adw.Bin {
+  child: Stack stack {
+    transition-type: crossfade;
+    vhomogeneous: false;
+
+    StackPage {
+      name: "diagram";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("C4 Diagram");
+          description: _("Drag from an element's handles to relate it to another. Double-click an element's technology or description to edit it.");
+
+          Adw.ComboRow level_row {
+            title: _("View");
+          }
+
+          Adw.EntryRow title_row {
+            title: _("Title");
+            show-apply-button: true;
+          }
+
+          Adw.ActionRow {
+            title: _("Auto Layout");
+            subtitle: _("Discard manual positions");
+            activatable-widget: layout_button;
+
+            [suffix]
+            Button layout_button {
+              label: _("Arrange");
+              valign: center;
+            }
+          }
+        }
+
+        Adw.PreferencesGroup boundaries_group {
+          title: _("Boundaries");
+          description: _("Frames drawn around the elements placed in them");
+
+          header-suffix: Button add_boundary_button {
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Add Boundary");
+            valign: center;
+
+            styles [
+              "flat",
+            ]
+          };
+        }
+      };
+    }
+
+    StackPage {
+      name: "element";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Element");
+
+          Adw.EntryRow element_alias_row {
+            title: _("Alias");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow element_label_row {
+            title: _("Name");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow element_kind_row {
+            title: _("Kind");
+          }
+
+          Adw.ComboRow element_shape_row {
+            title: _("Shape");
+          }
+
+          Adw.SwitchRow element_external_row {
+            title: _("External");
+            subtitle: _("Outside the scope of the diagram");
+          }
+
+          Adw.EntryRow element_technology_row {
+            title: _("Technology");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow element_description_row {
+            title: _("Description");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow element_boundary_row {
+            title: _("Boundary");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_element_button {
+            label: _("Delete Element");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "relation";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Relationship");
+
+          Adw.EntryRow relation_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow relation_technology_row {
+            title: _("Technology");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow relation_from_row {
+            title: _("From");
+          }
+
+          Adw.ComboRow relation_to_row {
+            title: _("To");
+          }
+
+          Adw.SwitchRow relation_bidirectional_row {
+            title: _("Both Directions");
+          }
+
+          Adw.ActionRow {
+            title: _("Reverse Direction");
+            activatable-widget: reverse_button;
+
+            [suffix]
+            Button reverse_button {
+              icon-name: "object-flip-horizontal-symbolic";
+              tooltip-text: _("Reverse Direction");
+              valign: center;
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_relation_button {
+            label: _("Delete Relationship");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+  };
+}

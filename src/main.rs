@@ -1,5 +1,7 @@
 mod application;
 mod box_canvas;
+mod c4;
+mod c4_editor;
 mod class_diagram;
 mod class_editor;
 mod combo;
@@ -18,12 +20,18 @@ mod interaction;
 mod labels;
 mod layered;
 mod markdown;
+mod mindmap;
+mod mindmap_editor;
 mod new_diagram;
 mod palette;
 mod routing;
 mod sequence;
 mod sequence_editor;
+mod state;
+mod state_editor;
 mod syntax;
+mod usecase;
+mod usecase_editor;
 mod viewport;
 mod window;
 

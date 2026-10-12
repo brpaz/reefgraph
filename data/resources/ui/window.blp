@@ -126,6 +126,21 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
               }
 
               StackPage {
+                name: "state";
+                child: $MermanBoxCanvas state_canvas {};
+              }
+
+              StackPage {
+                name: "usecase";
+                child: $MermanBoxCanvas usecase_canvas {};
+              }
+
+              StackPage {
+                name: "mindmap";
+                child: $MermanBoxCanvas mindmap_canvas {};
+              }
+
+              StackPage {
                 name: "erd";
                 child: $MermanBoxCanvas erd_canvas {};
               }
@@ -133,6 +148,11 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
               StackPage {
                 name: "class";
                 child: $MermanBoxCanvas class_canvas {};
+              }
+
+              StackPage {
+                name: "c4";
+                child: $MermanBoxCanvas c4_canvas {};
               }
             };
 
@@ -190,6 +210,21 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
               }
 
               StackPage {
+                name: "state";
+                child: $MermanStateInspector state_inspector {};
+              }
+
+              StackPage {
+                name: "usecase";
+                child: $MermanUseCaseInspector usecase_inspector {};
+              }
+
+              StackPage {
+                name: "mindmap";
+                child: $MermanMindmapInspector mindmap_inspector {};
+              }
+
+              StackPage {
                 name: "erd";
                 child: $MermanErdInspector erd_inspector {};
               }
@@ -197,6 +232,11 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
               StackPage {
                 name: "class";
                 child: $MermanClassInspector class_inspector {};
+              }
+
+              StackPage {
+                name: "c4";
+                child: $MermanC4Inspector c4_inspector {};
               }
             };
 
