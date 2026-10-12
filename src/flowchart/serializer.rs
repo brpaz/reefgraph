@@ -113,7 +113,7 @@ mod tests {
 
         assert_eq!(
             serialize(&chart),
-            "flowchart LR\n    A[Start]\n    B{B}\n    C\n    A -->|go| B\n%% @merman pos A 10 21\n"
+            "flowchart LR\n    A[Start]\n    B{B}\n    C\n    A -->|go| B\n%% @reefgraph pos A 10 21\n"
         );
     }
 
@@ -148,8 +148,8 @@ flowchart RL
     B === E
     classDef hot fill:#f96
     %% keep me
-%% @merman pos A 1 2
-%% @merman pos B -30 40
+%% @reefgraph pos A 1 2
+%% @reefgraph pos B -30 40
 ";
         let chart = parse(src).unwrap();
         let reparsed = parse(&serialize(&chart)).unwrap();

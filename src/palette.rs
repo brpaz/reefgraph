@@ -32,7 +32,7 @@ mod imp {
     use super::*;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/dev/brunopaz/Merman/ui/palette.ui")]
+    #[template(resource = "/dev/brunopaz/Reefgraph/ui/palette.ui")]
     pub struct Palette {
         #[template_child]
         pub flowbox: TemplateChild<gtk::FlowBox>,
@@ -40,7 +40,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for Palette {
-        const NAME: &'static str = "MermanPalette";
+        const NAME: &'static str = "ReefgraphPalette";
         type Type = super::Palette;
         type ParentType = adw::Bin;
 

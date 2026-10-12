@@ -6,7 +6,7 @@ use adw::subclass::prelude::*;
 use gtk::{gio, glib};
 
 use crate::config::{APP_ID, PKGDATADIR, PROFILE, VERSION};
-use crate::window::MermanApplicationWindow;
+use crate::window::ReefgraphApplicationWindow;
 
 mod imp {
     use super::*;
@@ -14,22 +14,22 @@ mod imp {
     use std::cell::OnceCell;
 
     #[derive(Debug, Default)]
-    pub struct MermanApplication {
-        pub window: OnceCell<WeakRef<MermanApplicationWindow>>,
+    pub struct ReefgraphApplication {
+        pub window: OnceCell<WeakRef<ReefgraphApplicationWindow>>,
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for MermanApplication {
-        const NAME: &'static str = "MermanApplication";
-        type Type = super::MermanApplication;
+    impl ObjectSubclass for ReefgraphApplication {
+        const NAME: &'static str = "ReefgraphApplication";
+        type Type = super::ReefgraphApplication;
         type ParentType = adw::Application;
     }
 
-    impl ObjectImpl for MermanApplication {}
+    impl ObjectImpl for ReefgraphApplication {}
 
-    impl ApplicationImpl for MermanApplication {
+    impl ApplicationImpl for ReefgraphApplication {
         fn activate(&self) {
-            debug!("GtkApplication<MermanApplication>::activate");
+            debug!("GtkApplication<ReefgraphApplication>::activate");
             self.parent_activate();
             let app = self.obj();
 
@@ -38,7 +38,7 @@ mod imp {
                 return;
             }
 
-            let window = MermanApplicationWindow::new(&app);
+            let window = ReefgraphApplicationWindow::new(&app);
             self.window
                 .set(window.downgrade())
                 .expect("Window already set.");
@@ -60,7 +60,7 @@ mod imp {
         }
 
         fn startup(&self) {
-            debug!("GtkApplication<MermanApplication>::startup");
+            debug!("GtkApplication<ReefgraphApplication>::startup");
             self.parent_startup();
             let app = self.obj();
 
@@ -72,18 +72,18 @@ mod imp {
         }
     }
 
-    impl GtkApplicationImpl for MermanApplication {}
-    impl AdwApplicationImpl for MermanApplication {}
+    impl GtkApplicationImpl for ReefgraphApplication {}
+    impl AdwApplicationImpl for ReefgraphApplication {}
 }
 
 glib::wrapper! {
-    pub struct MermanApplication(ObjectSubclass<imp::MermanApplication>)
+    pub struct ReefgraphApplication(ObjectSubclass<imp::ReefgraphApplication>)
         @extends gio::Application, gtk::Application, adw::Application,
         @implements gio::ActionMap, gio::ActionGroup;
 }
 
-impl MermanApplication {
-    fn main_window(&self) -> MermanApplicationWindow {
+impl ReefgraphApplication {
+    fn main_window(&self) -> ReefgraphApplicationWindow {
         self.imp().window.get().unwrap().upgrade().unwrap()
     }
 
@@ -122,12 +122,12 @@ impl MermanApplication {
 
     fn show_about_dialog(&self) {
         let dialog = adw::AboutDialog::builder()
-            .application_name("Merman")
+            .application_name("Reefgraph")
             .application_icon(*APP_ID)
             .developer_name("Bruno Paz")
             .version(*VERSION)
-            .website("https://github.com/brpaz/merman")
-            .issue_url("https://github.com/brpaz/merman/issues")
+            .website("https://github.com/brpaz/reefgraph")
+            .issue_url("https://github.com/brpaz/reefgraph/issues")
             .license_type(gtk::License::MitX11)
             .developers(Self::authors())
             .translator_credits(gettext("translator-credits"))
@@ -137,7 +137,7 @@ impl MermanApplication {
     }
 
     pub fn run(&self) -> glib::ExitCode {
-        info!("{} ({})", "Merman", *APP_ID);
+        info!("{} ({})", "Reefgraph", *APP_ID);
         info!("Version: {} ({})", *VERSION, *PROFILE);
         info!("Datadir: {}", *PKGDATADIR);
 
@@ -145,12 +145,12 @@ impl MermanApplication {
     }
 }
 
-impl Default for MermanApplication {
+impl Default for ReefgraphApplication {
     fn default() -> Self {
         glib::Object::builder()
             .property("application-id", *APP_ID)
             .property("flags", gio::ApplicationFlags::HANDLES_OPEN)
-            .property("resource-base-path", "/dev/brunopaz/Merman/")
+            .property("resource-base-path", "/dev/brunopaz/Reefgraph/")
             .build()
     }
 }

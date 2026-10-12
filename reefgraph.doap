@@ -5,23 +5,23 @@
          xmlns:gnome="http://api.gnome.org/doap-extensions#"
          xmlns="http://usefulinc.com/ns/doap#">
 
-  <name xml:lang="en">Merman</name>
+  <name xml:lang="en">Reefgraph</name>
   <shortdesc xml:lang="en">
     Visual WYSIWYG editor for Mermaid diagrams
   </shortdesc>
-  <homepage rdf:resource="https://github.com/brpaz/merman" />
-  <bug-database rdf:resource="https://github.com/brpaz/merman/issues" />
+  <homepage rdf:resource="https://github.com/brpaz/reefgraph" />
+  <bug-database rdf:resource="https://github.com/brpaz/reefgraph/issues" />
 
   <category rdf:resource="http://api.gnome.org/doap-extensions#apps" />
   <programming-language>Rust</programming-language>
 
   <maintainer>
     <foaf:Person>
-      <foaf:name>Merman contributors</foaf:name>
+      <foaf:name>Reefgraph contributors</foaf:name>
       <foaf:account>
         <foaf:OnlineAccount>
-          <foaf:accountServiceHomepage rdf:resource="https://github.com/brpaz/merman" />
-          <foaf:accountName>merman</foaf:accountName>
+          <foaf:accountServiceHomepage rdf:resource="https://github.com/brpaz/reefgraph" />
+          <foaf:accountName>reefgraph</foaf:accountName>
         </foaf:OnlineAccount>
       </foaf:account>
     </foaf:Person>

@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn parses_direction_comments_and_positions() {
         let erd = parse(
-            "erDiagram\n direction LR\n A ||--|| B : x\n %% hello\n classDef big font-size:20px\n%% @merman pos A 5 6",
+            "erDiagram\n direction LR\n A ||--|| B : x\n %% hello\n classDef big font-size:20px\n%% @reefgraph pos A 5 6",
         )
         .unwrap();
         assert_eq!(erd.direction, Some(Direction::LeftRight));

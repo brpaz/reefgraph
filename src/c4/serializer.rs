@@ -106,8 +106,8 @@ C4Container
     Rel_D(auth, db, \"Reads\", \"\", $tags=\"x\")
     UpdateLayoutConfig($c4ShapeInRow=\"3\")
     %% kept
-%% @merman pos customer 100 80
-%% @merman pos web 300 80
+%% @reefgraph pos customer 100 80
+%% @reefgraph pos web 300 80
 ";
 
     #[test]

@@ -279,8 +279,8 @@ mod tests {
                 end note
                 classDef hot fill:#f00
                 %% comment
-                %% @merman pos A 10 20
-                %% @merman pos [*]end 5 6",
+                %% @reefgraph pos A 10 20
+                %% @reefgraph pos [*]end 5 6",
         )
         .unwrap();
         assert_eq!(d.direction, Some(Direction::LeftRight));

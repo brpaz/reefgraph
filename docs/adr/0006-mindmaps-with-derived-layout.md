@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Mermaid mindmaps are an indented outline: a node's parent is the closest less indented line above it. Most nodes are plain text without an id, several nodes may share the same text, and Mermaid lays mindmaps out itself. The other node-link diagrams keep manual positions as `%% @merman pos <id> <x> <y>` comments (ADR 0002), which needs a stable, whitespace-free id per node. Mindmap editing is also mostly structural (adding children, moving a branch) rather than placing shapes.
+Mermaid mindmaps are an indented outline: a node's parent is the closest less indented line above it. Most nodes are plain text without an id, several nodes may share the same text, and Mermaid lays mindmaps out itself. The other node-link diagrams keep manual positions as `%% @reefgraph pos <id> <x> <y>` comments (ADR 0002), which needs a stable, whitespace-free id per node. Mindmap editing is also mostly structural (adding children, moving a branch) rather than placing shapes.
 
 ## Decision
 - Mindmaps are edited on the shared box canvas (ADR 0003). Nodes get editor-only keys (`n0`, `n1`…) in source order; keys are never written to the source.

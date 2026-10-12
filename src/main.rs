@@ -40,7 +40,7 @@ use std::path::PathBuf;
 use gettextrs::{LocaleCategory, gettext};
 use gtk::{gio, glib};
 
-use self::application::MermanApplication;
+use self::application::ReefgraphApplication;
 use self::config::{GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE};
 
 fn main() -> glib::ExitCode {
@@ -53,7 +53,7 @@ fn main() -> glib::ExitCode {
         .expect("Unable to bind the text domain");
     gettextrs::textdomain(*GETTEXT_PACKAGE).expect("Unable to switch to the text domain");
 
-    glib::set_application_name(&gettext("Merman"));
+    glib::set_application_name(&gettext("Reefgraph"));
 
     let resources_file = std::env::var_os("MESON_RESOURCES_FILE")
         .map(PathBuf::from)
@@ -66,6 +66,6 @@ fn main() -> glib::ExitCode {
     });
     gio::resources_register(&res);
 
-    let app = MermanApplication::default();
+    let app = ReefgraphApplication::default();
     app.run()
 }

@@ -1,6 +1,6 @@
 # Architecture
 
-Merman is a GTK4/libadwaita application written in Rust for editing Mermaid flowcharts, sequence diagrams, state diagrams, use case diagrams, class diagrams, entity relationship diagrams, C4 diagrams and mindmaps. UI layouts are Blueprint files compiled to GtkBuilder XML at build time and bundled into a GResource.
+Reefgraph is a GTK4/libadwaita application written in Rust for editing Mermaid flowcharts, sequence diagrams, state diagrams, use case diagrams, class diagrams, entity relationship diagrams, C4 diagrams and mindmaps. UI layouts are Blueprint files compiled to GtkBuilder XML at build time and bundled into a GResource.
 
 ## Modules
 
@@ -22,25 +22,25 @@ src/
 ├── interaction.rs       # Navigable trait (scroll/zoom/pan), InlineEditor popover
 ├── export.rs            # SVG/PNG export: Exportable trait, Scene, render to a Cairo surface
 ├── markdown.rs          # Mermaid fenced blocks in Markdown: find, extract, write back
-├── box_canvas.rs        # MermanBoxCanvas: shared canvas for box-and-link diagrams (BoxDiagram trait)
-├── palette.rs           # MermanPalette: tiles supplied by the active editor
+├── box_canvas.rs        # ReefgraphBoxCanvas: shared canvas for box-and-link diagrams (BoxDiagram trait)
+├── palette.rs           # ReefgraphPalette: tiles supplied by the active editor
 ├── combo.rs, labels.rs  # Combo row models and translatable enum names
 ├── flowchart/           # Flowchart domain (no GTK): model, parser, serializer, layered layout
-├── flowchart_editor/    # MermanFlowchartCanvas, MermanFlowchartInspector, shape geometry and rendering
+├── flowchart_editor/    # ReefgraphFlowchartCanvas, ReefgraphFlowchartInspector, shape geometry and rendering
 ├── sequence/            # Sequence domain (no GTK): model, parser, serializer, layout and hit testing
-├── sequence_editor/     # MermanSequenceCanvas, MermanSequenceInspector, rendering
+├── sequence_editor/     # ReefgraphSequenceCanvas, ReefgraphSequenceInspector, rendering
 ├── state/               # State diagram domain (no GTK): model, parser, serializer, state geometry, layout
-├── state_editor/        # BoxDiagram for state diagrams, MermanStateInspector, state shapes
+├── state_editor/        # BoxDiagram for state diagrams, ReefgraphStateInspector, state shapes
 ├── usecase/             # Use case domain (no GTK): model, parser, serializer, element geometry, boundary frames, compound layout
-├── usecase_editor/      # BoxDiagram for use case diagrams, MermanUseCaseInspector, actor and relationship drawing
+├── usecase_editor/      # BoxDiagram for use case diagrams, ReefgraphUseCaseInspector, actor and relationship drawing
 ├── mindmap/             # Mindmap domain (no GTK): tree model, indentation parser, serializer, two-sided tree layout
-├── mindmap_editor/      # BoxDiagram for mindmaps, MermanMindmapInspector, node shapes and branches
+├── mindmap_editor/      # BoxDiagram for mindmaps, ReefgraphMindmapInspector, node shapes and branches
 ├── class_diagram/       # Class diagram domain (no GTK): model, parser, serializer, class box geometry, layout
-├── class_editor/        # BoxDiagram for class diagrams, MermanClassInspector, UML relation heads
+├── class_editor/        # BoxDiagram for class diagrams, ReefgraphClassInspector, UML relation heads
 ├── erd/                 # ERD domain (no GTK): model, parser, serializer, entity box geometry, layout
-├── erd_editor/          # BoxDiagram for ERDs, MermanErdInspector, crow's-foot rendering
+├── erd_editor/          # BoxDiagram for ERDs, ReefgraphErdInspector, crow's-foot rendering
 ├── c4/                  # C4 domain (no GTK): model, parser, serializer, element boxes, boundary frames, compound layout
-└── c4_editor/           # BoxDiagram for C4 diagrams, MermanC4Inspector, element shapes and frames
+└── c4_editor/           # BoxDiagram for C4 diagrams, ReefgraphC4Inspector, element shapes and frames
 
 data/resources/ui/*.blp  # Blueprint templates for window, palette, inspectors, shortcuts
 ```
@@ -49,7 +49,7 @@ New documents are created from the **New Diagram** dialog (Ctrl+N or the "+" hea
 
 Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its properties panel. Editor modules depend on the domain and the shared modules, never on each other.
 
-Flowcharts and sequence diagrams have their own canvas widgets. State, use case, class, entity relationship and C4 diagrams and mindmaps share `MermanBoxCanvas`, which implements moving, linking, the add-row button, in-place editing, undo and navigation once; each diagram type implements the `BoxDiagram` trait (geometry, rendering, what rows are and how edited text applies). Inspectors reach the typed model through `BoxCanvas::with::<M>` and `BoxCanvas::edit::<M>`; see [ADR 0003](adr/0003-shared-box-canvas.md).
+Flowcharts and sequence diagrams have their own canvas widgets. State, use case, class, entity relationship and C4 diagrams and mindmaps share `ReefgraphBoxCanvas`, which implements moving, linking, the add-row button, in-place editing, undo and navigation once; each diagram type implements the `BoxDiagram` trait (geometry, rendering, what rows are and how edited text applies). Inspectors reach the typed model through `BoxCanvas::with::<M>` and `BoxCanvas::edit::<M>`; see [ADR 0003](adr/0003-shared-box-canvas.md).
 
 ## Data Flow
 
@@ -141,13 +141,13 @@ Blocks (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`) are stored as 
 
 ## File Format
 
-Files are plain Mermaid, or Markdown documents (`.md`, `.markdown`) with a diagram in a ```` ```mermaid ```` or `~~~mermaid` fenced block. Opening a Markdown file edits one block, chosen from a list when there are several; saving writes the document back with only that block's contents replaced. The fence's indentation is removed for editing and restored on save, so blocks nested in list items round-trip. Unclosed fences are ignored. When a line of the diagram would close the block early, both fences are lengthened; lines are written with the document's line ending. **Save As** to a Markdown file writes the whole document; to any other file it writes the diagram alone, and the document is no longer linked. **Copy Mermaid Source** (Ctrl+Shift+C) copies the source without the `%% @merman pos <id> <x> <y>` lines (other comments and line endings are kept), for pasting where Mermaid is rendered.
+Files are plain Mermaid, or Markdown documents (`.md`, `.markdown`) with a diagram in a ```` ```mermaid ```` or `~~~mermaid` fenced block. Opening a Markdown file edits one block, chosen from a list when there are several; saving writes the document back with only that block's contents replaced. The fence's indentation is removed for editing and restored on save, so blocks nested in list items round-trip. Unclosed fences are ignored. When a line of the diagram would close the block early, both fences are lengthened; lines are written with the document's line ending. **Save As** to a Markdown file writes the whole document; to any other file it writes the diagram alone, and the document is no longer linked. **Copy Mermaid Source** (Ctrl+Shift+C) copies the source without the `%% @reefgraph pos <id> <x> <y>` lines (other comments and line endings are kept), for pasting where Mermaid is rendered.
 
-- Flowcharts: manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). `classDef`, `class`, `style`, `linkStyle`, `click` and comments are kept verbatim. `subgraph` is rejected with a parse error.
+- Flowcharts: manually placed nodes are stored as `%% @reefgraph pos <id> <x> <y>` comments (`%% @merman pos`, written before the app was renamed, is still read); see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). `classDef`, `class`, `style`, `linkStyle`, `click` and comments are kept verbatim. `subgraph` is rejected with a parse error.
 - Entity relationship diagrams: manually placed entities use the same position comments as flowcharts. Relationships written with word aliases (`only one to zero or more`) are normalized to symbols when the canvas rewrites the source. `classDef`, `class`, `style` and comments are kept verbatim.
 - Class diagrams: manually placed classes use the same position comments. Classes only mentioned in relations are declared with `class Name` when the canvas rewrites the source. `note`, `click`, `link`, `callback`, `cssClass`, `classDef`, `style` and comments are kept verbatim; `namespace` and `:::style` are rejected with a parse error.
 - C4 diagrams: `C4Context`, `C4Container` and `C4Component` are supported; `C4Dynamic` and `C4Deployment` are rejected with a parse error. Manually placed elements use the same position comments. Arguments after the description (sprite, tags, link, `$name=` options) are kept as written; `Rel_Back` is rewritten as `Rel` with swapped ends and `Rel_Up`/`Rel_Down`/`Rel_Left`/`Rel_Right` as their short forms. At each nesting level elements are written before boundaries. `Update…Style`, `UpdateLayoutConfig`, `Add…Tag` and comments are kept verbatim.
-- State diagrams: `stateDiagram` and `stateDiagram-v2` are supported. `[*]` is stored as a start state (`[*]start`) when it is a transition's source and an end state (`[*]end`) when it is the target, so positions are kept as `%% @merman pos [*]start <x> <y>`; a positioned start or end state exists even before a transition reaches it. Descriptions are written `id : text`, one statement per line, including those declared as `state "text" as id`. Composite states, concurrent regions (`--`) and `:::style` are rejected with a parse error. Notes (single and multi-line), `classDef`, `class`, `style`, `hide`, `scale`, `accTitle`, `accDescr` and comments are kept verbatim.
+- State diagrams: `stateDiagram` and `stateDiagram-v2` are supported. `[*]` is stored as a start state (`[*]start`) when it is a transition's source and an end state (`[*]end`) when it is the target, so positions are kept as `%% @reefgraph pos [*]start <x> <y>`; a positioned start or end state exists even before a transition reaches it. Descriptions are written `id : text`, one statement per line, including those declared as `state "text" as id`. Composite states, concurrent regions (`--`) and `:::style` are rejected with a parse error. Notes (single and multi-line), `classDef`, `class`, `style`, `hide`, `scale`, `accTitle`, `accDescr` and comments are kept verbatim.
 - Use case diagrams (`usecase-beta`, a beta diagram of Mermaid 12): actors, ellipse and rectangle use cases, all relationship operators with labels, extra dashes and edge ids, and one level of `systemBoundary` blocks. Labels, metadata (`@{ … }`), stereotypes and `:::` classes are kept as written; labels edited in the editor are written quoted. Endpoints only used in relationships are declared on the way out. Notes, `classDef`, `class`, `style`, `accTitle`, `accDescr` and standalone `id@{ … }` statements are kept verbatim. JSON tables and statements spanning several lines (Markdown labels with line breaks, multi-line metadata) are rejected with a parse error.
 - Mindmaps: every shape is supported. Node text is kept as written; text typed in the editor that contains delimiters is quoted, and line breaks become `<br/>`. Indentation is rewritten as two spaces per level; when reading, a tab counts as four columns. `::icon(…)`, `:::class` and comment lines stay attached to the node above them. Node text spanning several lines is rejected with a parse error.
 - Sequence diagrams: layout follows participant and statement order, so no positions are stored. Participants are always declared explicitly when serializing. `links`, `link`, `properties`, `details` and comments are kept verbatim. `box`, `create` and `destroy` are rejected with a parse error.

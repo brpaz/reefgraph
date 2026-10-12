@@ -7,7 +7,7 @@ use gettextrs::gettext;
 use gtk::{gio, glib};
 use sourceview5::prelude::*;
 
-use crate::application::MermanApplication;
+use crate::application::ReefgraphApplication;
 use crate::box_canvas::BoxCanvas;
 use crate::config::{APP_ID, PROFILE};
 use crate::diagram::{self, Diagram, DiagramKind, ForCanvas};
@@ -30,8 +30,8 @@ mod imp {
     use super::*;
 
     #[derive(Debug, gtk::CompositeTemplate)]
-    #[template(resource = "/dev/brunopaz/Merman/ui/window.ui")]
-    pub struct MermanApplicationWindow {
+    #[template(resource = "/dev/brunopaz/Reefgraph/ui/window.ui")]
+    pub struct ReefgraphApplicationWindow {
         #[template_child]
         pub toast_overlay: TemplateChild<adw::ToastOverlay>,
         #[template_child]
@@ -92,7 +92,7 @@ mod imp {
         pub pending_parse: RefCell<Option<glib::SourceId>>,
     }
 
-    impl Default for MermanApplicationWindow {
+    impl Default for ReefgraphApplicationWindow {
         fn default() -> Self {
             Self {
                 toast_overlay: TemplateChild::default(),
@@ -131,9 +131,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for MermanApplicationWindow {
-        const NAME: &'static str = "MermanApplicationWindow";
-        type Type = super::MermanApplicationWindow;
+    impl ObjectSubclass for ReefgraphApplicationWindow {
+        const NAME: &'static str = "ReefgraphApplicationWindow";
+        type Type = super::ReefgraphApplicationWindow;
         type ParentType = adw::ApplicationWindow;
 
         fn class_init(klass: &mut Self::Class) {
@@ -157,7 +157,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for MermanApplicationWindow {
+    impl ObjectImpl for ReefgraphApplicationWindow {
         fn constructed(&self) {
             self.parent_constructed();
             let obj = self.obj();
@@ -174,9 +174,9 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for MermanApplicationWindow {}
+    impl WidgetImpl for ReefgraphApplicationWindow {}
 
-    impl WindowImpl for MermanApplicationWindow {
+    impl WindowImpl for ReefgraphApplicationWindow {
         fn close_request(&self) -> glib::Propagation {
             let obj = self.obj();
             if let Err(err) = obj.save_window_size() {
@@ -199,20 +199,20 @@ mod imp {
         }
     }
 
-    impl ApplicationWindowImpl for MermanApplicationWindow {}
-    impl AdwApplicationWindowImpl for MermanApplicationWindow {}
+    impl ApplicationWindowImpl for ReefgraphApplicationWindow {}
+    impl AdwApplicationWindowImpl for ReefgraphApplicationWindow {}
 }
 
 glib::wrapper! {
-    pub struct MermanApplicationWindow(ObjectSubclass<imp::MermanApplicationWindow>)
+    pub struct ReefgraphApplicationWindow(ObjectSubclass<imp::ReefgraphApplicationWindow>)
         @extends gtk::Widget, gtk::Window, gtk::ApplicationWindow, adw::ApplicationWindow,
         @implements gio::ActionMap, gio::ActionGroup,
                     gtk::Root, gtk::Native, gtk::ShortcutManager,
                     gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
-impl MermanApplicationWindow {
-    pub fn new(app: &MermanApplication) -> Self {
+impl ReefgraphApplicationWindow {
+    pub fn new(app: &ReefgraphApplication) -> Self {
         glib::Object::builder().property("application", app).build()
     }
 

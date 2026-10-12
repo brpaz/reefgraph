@@ -78,8 +78,8 @@ mod tests {
     check --> [*] : done
     note right of Idle : waits
     classDef hot fill:#f00
-%% @merman pos Idle 100 40
-%% @merman pos [*]end 300 40
+%% @reefgraph pos Idle 100 40
+%% @reefgraph pos [*]end 300 40
 ";
 
     #[test]

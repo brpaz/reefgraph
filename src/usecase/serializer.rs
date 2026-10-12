@@ -132,7 +132,7 @@ mod tests {
     note for Checkout \"`Validates the **cart**`\"
     classDef critical stroke:#c33,stroke-width:3px
     starts@{ animation: fast }
-%% @merman pos Customer 40 100
+%% @reefgraph pos Customer 40 100
 ";
 
     #[test]

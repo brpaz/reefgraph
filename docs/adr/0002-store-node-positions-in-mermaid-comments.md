@@ -8,17 +8,17 @@ Mermaid has no syntax for node coordinates; its renderer always lays diagrams ou
 
 ## Decision
 - The file format is plain Mermaid source (`.mmd`).
-- Manually placed nodes (flowchart nodes, classes and ERD entities) are persisted as comment lines at the end of the file: `%% @merman pos <id> <x> <y>`. Mermaid ignores `%%` comments.
+- Manually placed nodes (flowchart nodes, classes and ERD entities) are persisted as comment lines at the end of the file: `%% @reefgraph pos <id> <x> <y>`. Mermaid ignores `%%` comments.
 - Nodes without a stored position are placed by a layered auto layout (longest-path ranking, barycenter ordering, cycle-breaking DFS), offset to stay consistent with already-placed nodes.
 - While editing the text, nodes keep their current canvas position even when the text has no position line for them, so typing does not make nodes jump. "Auto Layout" discards all stored positions.
 
 ## Alternatives Considered
-- **Sidecar file** (`diagram.mmd.merman.json`): keeps the Mermaid clean, but files get separated when copied or committed alone.
+- **Sidecar file** (`diagram.mmd.reefgraph.json`): keeps the Mermaid clean, but files get separated when copied or committed alone.
 - **Auto layout only**: no extra metadata, but manual arrangement is lost on every edit, defeating a WYSIWYG editor.
 - **YAML front matter**: valid Mermaid, but front matter is reserved for Mermaid config and is rendered as diagram title by some tools.
 
 ## Consequences
-- Files open in any Mermaid renderer; the stored positions only affect Merman.
-- Other renderers still lay the diagram out their own way, so Merman's arrangement is not portable.
+- Files open in any Mermaid renderer; the stored positions only affect Reefgraph.
+- Other renderers still lay the diagram out their own way, so Reefgraph's arrangement is not portable.
 - Position lines add noise to diffs when nodes are moved.
-- Renaming a node in a text editor outside Merman orphans its position line; it is ignored on load.
+- Renaming a node in a text editor outside Reefgraph orphans its position line; it is ignored on load.

@@ -105,7 +105,7 @@ mod tests {
     Service ..> Logger
     Widget --() Api
     note for Duck \"can fly\"
-%% @merman pos Animal 200 60
+%% @reefgraph pos Animal 200 60
 ";
 
     #[test]

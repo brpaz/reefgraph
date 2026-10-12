@@ -3,8 +3,8 @@
   <id>@app-id@</id>
   <metadata_license>CC0</metadata_license>
   <project_license>MIT</project_license>
-  <name>Merman</name>
-  <summary>Visual WYSIWYG editor for Mermaid diagrams</summary>
+  <name>Reefgraph</name>
+  <summary>Draw Mermaid diagrams</summary>
   <description>
     <p>Visual WYSIWYG editor for Mermaid diagrams</p>
   </description>
@@ -15,9 +15,15 @@
       <caption>Main window</caption>
     </screenshot>
   </screenshots>
-  <url type="homepage">https://github.com/brpaz/merman</url>
-  <url type="bugtracker">https://github.com/brpaz/merman/issues</url>
-  <url type="vcs-browser">https://github.com/brpaz/merman</url>
+  <url type="homepage">https://github.com/brpaz/reefgraph</url>
+  <url type="bugtracker">https://github.com/brpaz/reefgraph/issues</url>
+  <url type="vcs-browser">https://github.com/brpaz/reefgraph</url>
+  <keywords>
+    <keyword>mermaid</keyword>
+    <keyword>diagram</keyword>
+    <keyword>flowchart</keyword>
+    <keyword>uml</keyword>
+  </keywords>
   <content_rating type="oars-1.1" />
   <releases>
     <release version="0.1.0" date="2019-07-11" />

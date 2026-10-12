@@ -188,12 +188,12 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for BoxCanvas {
-        const NAME: &'static str = "MermanBoxCanvas";
+        const NAME: &'static str = "ReefgraphBoxCanvas";
         type Type = super::BoxCanvas;
         type ParentType = gtk::Widget;
 
         fn class_init(klass: &mut Self::Class) {
-            klass.set_css_name("merman-canvas");
+            klass.set_css_name("reefgraph-canvas");
             klass.set_accessible_role(gtk::AccessibleRole::Img);
         }
     }

@@ -1,8 +1,8 @@
-# Merman
+# Reefgraph
 
 > Visual WYSIWYG editor for Mermaid diagrams
 
-[![CI](https://img.shields.io/github/actions/workflow/status/brpaz/merman/ci.yml?branch=main&label=CI&logo=github&style=for-the-badge)](https://github.com/brpaz/merman/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/brpaz/reefgraph/ci.yml?branch=main&label=CI&logo=github&style=for-the-badge)](https://github.com/brpaz/reefgraph/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE.md)
 [![Flatpak](https://img.shields.io/badge/flatpak-ready-4A90D9?style=for-the-badge&logo=flatpak&logoColor=white)](https://flatpak.org)
 
@@ -33,25 +33,25 @@
 
 ## Install
 
-Download the package for your system from the [latest release](https://github.com/brpaz/merman/releases/latest):
+Download the package for your system from the [latest release](https://github.com/brpaz/reefgraph/releases/latest):
 
 ```bash
 # Flatpak
-flatpak install --user dev.brunopaz.Merman.flatpak
-flatpak run dev.brunopaz.Merman
+flatpak install --user dev.brunopaz.Reefgraph.flatpak
+flatpak run dev.brunopaz.Reefgraph
 
 # Debian/Ubuntu
-sudo apt install ./merman.deb
+sudo apt install ./reefgraph.deb
 
 # Fedora
-sudo dnf install ./merman.rpm
+sudo dnf install ./reefgraph.rpm
 ```
 
 ## Build from Source
 
 ```bash
-git clone https://github.com/brpaz/merman
-cd merman
+git clone https://github.com/brpaz/reefgraph
+cd reefgraph
 task run
 ```
 
@@ -63,8 +63,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contributors
 
-<a href="https://github.com/brpaz/merman/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=brpaz/merman" alt="Contributors" />
+<a href="https://github.com/brpaz/reefgraph/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=brpaz/reefgraph" alt="Contributors" />
 </a>
 
 ## License

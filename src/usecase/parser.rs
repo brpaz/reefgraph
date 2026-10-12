@@ -559,7 +559,7 @@ mod tests {
             accDescr {
               Long text
             }
-            %% @merman pos Clerk 10 20",
+            %% @reefgraph pos Clerk 10 20",
         )
         .unwrap();
         assert_eq!(d.direction, Some(Direction::LeftRight));

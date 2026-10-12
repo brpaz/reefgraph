@@ -71,8 +71,8 @@ jobs:
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: dev.brunopaz.Merman.Devel.flatpak
-          manifest-path: build-aux/dev.brunopaz.Merman.Devel.json
+          bundle: dev.brunopaz.Reefgraph.Devel.flatpak
+          manifest-path: build-aux/dev.brunopaz.Reefgraph.Devel.json
           run-tests: false
           cache-key: flatpak-builder-${{ github.sha }}
 
@@ -80,8 +80,8 @@ jobs:
         uses: actions/upload-artifact@v7
         if: github.event_name != 'pull_request'
         with:
-          name: dev.brunopaz.Merman.Devel.flatpak
-          path: dev.brunopaz.Merman.Devel.flatpak
+          name: dev.brunopaz.Reefgraph.Devel.flatpak
+          path: dev.brunopaz.Reefgraph.Devel.flatpak
 
   flatpak-release:
     name: Build Flatpak (Release)
@@ -106,15 +106,15 @@ jobs:
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: dev.brunopaz.Merman.flatpak
-          manifest-path: build-aux/dev.brunopaz.Merman.json
+          bundle: dev.brunopaz.Reefgraph.flatpak
+          manifest-path: build-aux/dev.brunopaz.Reefgraph.json
           run-tests: false
           cache-key: flatpak-builder-${{ github.sha }}
 
       - name: Upload Flatpak artifact to release
         uses: softprops/action-gh-release@v3
         with:
-          files: dev.brunopaz.Merman.flatpak
+          files: dev.brunopaz.Reefgraph.flatpak
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-deb:
@@ -143,12 +143,12 @@ jobs:
       - name: Package .deb
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager deb --target merman.deb
+        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager deb --target reefgraph.deb
 
       - uses: actions/upload-artifact@v7
         with:
-          name: merman-deb
-          path: merman.deb
+          name: reefgraph-deb
+          path: reefgraph.deb
 
   build-rpm:
     name: Build .rpm package
@@ -180,12 +180,12 @@ jobs:
       - name: Package .rpm
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager rpm --target merman.rpm
+        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager rpm --target reefgraph.rpm
 
       - uses: actions/upload-artifact@v7
         with:
-          name: merman-rpm
-          path: merman.rpm
+          name: reefgraph-rpm
+          path: reefgraph.rpm
 
   native-packages-release:
     name: Attach .deb/.rpm packages to release
@@ -197,16 +197,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: merman-deb
+          name: reefgraph-deb
 
       - uses: actions/download-artifact@v8
         with:
-          name: merman-rpm
+          name: reefgraph-rpm
 
       - name: Upload packages to the release
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            merman.deb
-            merman.rpm
+            reefgraph.deb
+            reefgraph.rpm
           token: ${{ secrets.GITHUB_TOKEN }}

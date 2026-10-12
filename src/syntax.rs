@@ -5,7 +5,10 @@ use std::fmt;
 use crate::geometry::Point;
 
 /// Marker of the comment lines that store manually placed node positions.
-const POSITION_META: &str = "@merman pos";
+const POSITION_META: &str = "@reefgraph pos";
+/// Marker written before the app was renamed to Reefgraph; still read so
+/// files saved then keep their layout.
+const LEGACY_POSITION_META: &str = "@merman pos";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseError {
@@ -115,10 +118,13 @@ pub fn split_statements(line: &str) -> Vec<&str> {
     statements
 }
 
-/// Reads a `%% @merman pos <id> <x> <y>` comment, given the text after
+/// Reads a `%% @reefgraph pos <id> <x> <y>` comment, given the text after
 /// `%%`. Anything else, including comments that only look similar, is `None`.
 pub fn position_comment(comment: &str) -> Option<(String, Point)> {
-    let meta = comment.trim_start().strip_prefix(POSITION_META)?;
+    let comment = comment.trim_start();
+    let meta = comment
+        .strip_prefix(POSITION_META)
+        .or_else(|| comment.strip_prefix(LEGACY_POSITION_META))?;
     if !meta.starts_with(char::is_whitespace) {
         return None;
     }
@@ -215,33 +221,37 @@ mod tests {
     #[test]
     fn reads_and_writes_position_comments() {
         let line = position_line("A", Point::new(10.4, -2.6));
-        assert_eq!(line, "%% @merman pos A 10 -3");
+        assert_eq!(line, "%% @reefgraph pos A 10 -3");
         let comment = line.strip_prefix("%%").unwrap();
         assert_eq!(
             position_comment(comment),
             Some(("A".into(), Point::new(10.0, -3.0)))
         );
-        assert_eq!(position_comment(" @merman pos A x"), None);
-        assert_eq!(position_comment(" @merman pos A 1 2 3"), None);
-        assert_eq!(position_comment(" @merman pos A NaN 2"), None);
-        assert_eq!(position_comment(" @merman pos A 1 inf"), None);
-        assert_eq!(position_comment(" @merman posX A 1 2"), None);
+        assert_eq!(position_comment(" @reefgraph pos A x"), None);
+        assert_eq!(position_comment(" @reefgraph pos A 1 2 3"), None);
+        assert_eq!(position_comment(" @reefgraph pos A NaN 2"), None);
+        assert_eq!(position_comment(" @reefgraph pos A 1 inf"), None);
+        assert_eq!(position_comment(" @reefgraph posX A 1 2"), None);
+        assert_eq!(
+            position_comment(" @merman pos B 3 4"),
+            Some(("B".into(), Point::new(3.0, 4.0)))
+        );
         assert_eq!(position_comment(" plain comment"), None);
     }
 
     #[test]
     fn strips_only_editor_comments() {
-        let src = "flowchart TD\n    A --> B\n    %% keep me\n%% @merman pos A 1 2\n  %% @merman pos B 3 4\n%% @merman possible rename\n%% @merman pos C x\n";
+        let src = "flowchart TD\n    A --> B\n    %% keep me\n%% @reefgraph pos A 1 2\n  %% @reefgraph pos B 3 4\n%% @reefgraph possible rename\n%% @reefgraph pos C x\n";
         assert_eq!(
             strip_editor_comments(src),
-            "flowchart TD\n    A --> B\n    %% keep me\n%% @merman possible rename\n%% @merman pos C x\n"
+            "flowchart TD\n    A --> B\n    %% keep me\n%% @reefgraph possible rename\n%% @reefgraph pos C x\n"
         );
         assert_eq!(strip_editor_comments("graph TD"), "graph TD");
     }
 
     #[test]
     fn stripping_keeps_line_endings() {
-        let src = "graph TD\r\n%% @merman pos A 1 2\r\nA --> B\r\n";
+        let src = "graph TD\r\n%% @reefgraph pos A 1 2\r\nA --> B\r\n";
         assert_eq!(strip_editor_comments(src), "graph TD\r\nA --> B\r\n");
     }
 

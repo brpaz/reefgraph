@@ -1,7 +1,7 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $MermanApplicationWindow: Adw.ApplicationWindow {
+template $ReefgraphApplicationWindow: Adw.ApplicationWindow {
   width-request: 360;
   height-request: 294;
 
@@ -27,7 +27,7 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
           };
         }
 
-        content: $MermanPalette palette {};
+        content: $ReefgraphPalette palette {};
       };
 
       content: Adw.ToolbarView {
@@ -117,42 +117,42 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
 
               StackPage {
                 name: "flowchart";
-                child: $MermanFlowchartCanvas flowchart_canvas {};
+                child: $ReefgraphFlowchartCanvas flowchart_canvas {};
               }
 
               StackPage {
                 name: "sequence";
-                child: $MermanSequenceCanvas sequence_canvas {};
+                child: $ReefgraphSequenceCanvas sequence_canvas {};
               }
 
               StackPage {
                 name: "state";
-                child: $MermanBoxCanvas state_canvas {};
+                child: $ReefgraphBoxCanvas state_canvas {};
               }
 
               StackPage {
                 name: "usecase";
-                child: $MermanBoxCanvas usecase_canvas {};
+                child: $ReefgraphBoxCanvas usecase_canvas {};
               }
 
               StackPage {
                 name: "mindmap";
-                child: $MermanBoxCanvas mindmap_canvas {};
+                child: $ReefgraphBoxCanvas mindmap_canvas {};
               }
 
               StackPage {
                 name: "erd";
-                child: $MermanBoxCanvas erd_canvas {};
+                child: $ReefgraphBoxCanvas erd_canvas {};
               }
 
               StackPage {
                 name: "class";
-                child: $MermanBoxCanvas class_canvas {};
+                child: $ReefgraphBoxCanvas class_canvas {};
               }
 
               StackPage {
                 name: "c4";
-                child: $MermanBoxCanvas c4_canvas {};
+                child: $ReefgraphBoxCanvas c4_canvas {};
               }
             };
 
@@ -201,42 +201,42 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
 
               StackPage {
                 name: "flowchart";
-                child: $MermanFlowchartInspector flowchart_inspector {};
+                child: $ReefgraphFlowchartInspector flowchart_inspector {};
               }
 
               StackPage {
                 name: "sequence";
-                child: $MermanSequenceInspector sequence_inspector {};
+                child: $ReefgraphSequenceInspector sequence_inspector {};
               }
 
               StackPage {
                 name: "state";
-                child: $MermanStateInspector state_inspector {};
+                child: $ReefgraphStateInspector state_inspector {};
               }
 
               StackPage {
                 name: "usecase";
-                child: $MermanUseCaseInspector usecase_inspector {};
+                child: $ReefgraphUseCaseInspector usecase_inspector {};
               }
 
               StackPage {
                 name: "mindmap";
-                child: $MermanMindmapInspector mindmap_inspector {};
+                child: $ReefgraphMindmapInspector mindmap_inspector {};
               }
 
               StackPage {
                 name: "erd";
-                child: $MermanErdInspector erd_inspector {};
+                child: $ReefgraphErdInspector erd_inspector {};
               }
 
               StackPage {
                 name: "class";
-                child: $MermanClassInspector class_inspector {};
+                child: $ReefgraphClassInspector class_inspector {};
               }
 
               StackPage {
                 name: "c4";
-                child: $MermanC4Inspector c4_inspector {};
+                child: $ReefgraphC4Inspector c4_inspector {};
               }
             };
 
@@ -290,7 +290,7 @@ menu primary_menu {
     }
 
     item {
-      label: _("_About Merman");
+      label: _("_About Reefgraph");
       action: "app.about";
     }
   }

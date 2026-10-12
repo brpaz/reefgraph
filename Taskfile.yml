@@ -2,9 +2,9 @@ version: "3"
 vars:
   BUILD_DIR: _build
   INSTALL_DIR: _install
-  FLATPAK_MANIFEST: build-aux/dev.brunopaz.Merman.Devel.json
-  APP_ID: "dev.brunopaz.Merman.Devel"
-  APP_ID_PROD: "dev.brunopaz.Merman"
+  FLATPAK_MANIFEST: build-aux/dev.brunopaz.Reefgraph.Devel.json
+  APP_ID: "dev.brunopaz.Reefgraph.Devel"
+  APP_ID_PROD: "dev.brunopaz.Reefgraph"
 tasks:
   setup:
     desc: Configure the Meson build directory (development profile)
@@ -34,7 +34,7 @@ tasks:
     desc: Build and run the application
     deps: [build]
     cmds:
-      - meson devenv -C {{.BUILD_DIR}} ./src/merman
+      - meson devenv -C {{.BUILD_DIR}} ./src/reefgraph
 
   test:
     desc: Run all tests via Meson
@@ -66,13 +66,13 @@ tasks:
     desc: Generate the POT translation template
     deps: [setup]
     cmds:
-      - ninja -C {{.BUILD_DIR}} merman-pot
+      - ninja -C {{.BUILD_DIR}} reefgraph-pot
 
   update-po:
     desc: Update all PO translation files from the POT template
     deps: [setup]
     cmds:
-      - ninja -C {{.BUILD_DIR}} merman-update-po
+      - ninja -C {{.BUILD_DIR}} reefgraph-update-po
 
   install:
     desc: Install the application (requires sudo or appropriate prefix)
@@ -162,7 +162,7 @@ tasks:
       - meson compile -C {{.BUILD_DIR}}
       - rm -rf {{.INSTALL_DIR}}
       - DESTDIR=$PWD/{{.INSTALL_DIR}} meson install -C {{.BUILD_DIR}}
-      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager deb --target merman.deb
+      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager deb --target reefgraph.deb
 
   package:rpm:
     desc: Build and package a .rpm from a release build (requires nfpm on $PATH)
@@ -171,4 +171,4 @@ tasks:
       - meson compile -C {{.BUILD_DIR}}
       - rm -rf {{.INSTALL_DIR}}
       - DESTDIR=$PWD/{{.INSTALL_DIR}} meson install -C {{.BUILD_DIR}}
-      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager rpm --target merman.rpm
+      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager rpm --target reefgraph.rpm

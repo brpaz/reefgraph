@@ -16,7 +16,7 @@ mod imp {
     use super::*;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/dev/brunopaz/Merman/ui/mindmap-inspector.ui")]
+    #[template(resource = "/dev/brunopaz/Reefgraph/ui/mindmap-inspector.ui")]
     pub struct Inspector {
         #[template_child]
         pub stack: TemplateChild<gtk::Stack>,
@@ -36,7 +36,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for Inspector {
-        const NAME: &'static str = "MermanMindmapInspector";
+        const NAME: &'static str = "ReefgraphMindmapInspector";
         type Type = super::Inspector;
         type ParentType = adw::Bin;
 
