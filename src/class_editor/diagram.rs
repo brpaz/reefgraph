@@ -121,8 +121,8 @@ impl BoxDiagram for ClassDiagram {
         self.rename_class(old, new)
     }
 
-    fn add_link(&mut self, from: &str, to: &str) -> usize {
-        self.add_relation(from, to)
+    fn add_link(&mut self, from: &str, to: &str) -> Option<usize> {
+        Some(self.add_relation(from, to))
     }
 
     fn remove_link(&mut self, index: usize) {

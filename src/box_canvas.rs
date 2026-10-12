@@ -1,5 +1,5 @@
-//! Canvas for diagrams of boxes with rows joined by links (class diagrams,
-//! entity relationship diagrams). Boxes are moved by dragging, linked by
+//! Canvas for diagrams of boxes, optionally with rows, joined by links.
+//! Boxes are moved by dragging, linked by
 //! dragging from their handles and edited in place. What a box looks like
 //! and what its rows mean is up to the [`BoxDiagram`] being edited.
 
@@ -63,10 +63,25 @@ pub trait BoxDiagram: Debug {
     fn box_ids(&self) -> Vec<String>;
     /// Positioned boxes and their outer rectangles, in drawing order.
     fn boxes(&self, measure: Measure) -> Vec<(&str, Rect)>;
+    /// Areas drawn around boxes that are not boxes themselves, such as
+    /// group frames; they count towards the diagram's extent.
+    fn decorations(&self, _measure: Measure) -> Vec<Rect> {
+        Vec::new()
+    }
     fn position(&self, id: &str) -> Option<Point>;
     fn set_position(&mut self, id: &str, pos: Point);
     /// Outer rectangle of a positioned box.
     fn box_rect(&self, id: &str, measure: Measure) -> Option<Rect>;
+    /// Shape inside the box rectangle that links end on.
+    fn outline(&self, _id: &str) -> Outline {
+        Outline::Rect
+    }
+    /// Whether links bend around boxes in their way. Diagrams whose layout
+    /// keeps links clear draw them straight, which skips checking every
+    /// link against every box.
+    fn routes_around_boxes(&self) -> bool {
+        true
+    }
     /// Name shown in the box header: the label, or the id when there is none.
     fn label(&self, id: &str) -> Option<String>;
     fn set_label(&mut self, id: &str, label: String);
@@ -86,12 +101,18 @@ pub trait BoxDiagram: Debug {
     /// `at`, returning the copy's id.
     fn paste_box(&mut self, from: &dyn BoxDiagram, id: &str, at: Point) -> Option<String>;
     fn rename_box(&mut self, old: &str, new: &str) -> Result<(), RenameError>;
-    fn add_link(&mut self, from: &str, to: &str) -> usize;
+    /// Adds a link and returns its index, or `None` when the diagram does
+    /// not allow one between these boxes.
+    fn add_link(&mut self, from: &str, to: &str) -> Option<usize>;
     fn remove_link(&mut self, index: usize);
     fn link_label(&self, index: usize) -> Option<String>;
     fn set_link_label(&mut self, index: usize, label: String);
     /// Row under `p`, if the point is on one of the box's rows.
     fn row_at(&self, id: &str, p: Point, measure: Measure) -> Option<usize>;
+    /// Whether boxes take new rows, which shows the "add row" button.
+    fn grows_rows(&self) -> bool {
+        true
+    }
     /// Appends an empty row and returns its index.
     fn add_row(&mut self, id: &str) -> Option<usize>;
     /// Text of a row and where its in-place editor should point.
@@ -558,9 +579,22 @@ impl BoxCanvas {
         let nodes: HashMap<&str, (Outline, Rect)> = diagram
             .boxes(&measure)
             .into_iter()
-            .map(|(id, rect)| (id, (Outline::Rect, rect)))
+            .map(|(id, rect)| (id, (diagram.outline(id), rect)))
             .collect();
         let links = diagram.links();
+        if !diagram.routes_around_boxes() {
+            return links
+                .iter()
+                .map(
+                    |(from, to)| match (nodes.get(from.as_str()), nodes.get(to.as_str())) {
+                        (Some((fo, fr)), Some((to_outline, tr))) => {
+                            routing::edge_path(*fo, fr, *to_outline, tr, 0.0)
+                        }
+                        _ => Vec::new(),
+                    },
+                )
+                .collect();
+        }
         let edges: Vec<(&str, &str)> = links
             .iter()
             .map(|(a, b)| (a.as_str(), b.as_str()))
@@ -608,6 +642,9 @@ impl BoxCanvas {
     /// Center of the "add row" button below the selected box, left of the
     /// bottom connection handle.
     fn add_button_center(&self) -> Option<Point> {
+        if !self.with_dyn(|d| d.grows_rows())? {
+            return None;
+        }
         let rect = self.box_rect(&self.selected_box()?)?;
         let gap = ADD_BUTTON_GAP / self.zoom();
         Some(Point::new(rect.x + gap, rect.y + rect.h + gap))
@@ -808,20 +845,29 @@ impl BoxCanvas {
                 moved: true,
                 ..
             } => {
-                imp.history.borrow_mut().record(before);
-                self.emit_by_name::<()>("history-changed", &[]);
-                self.emit_by_name::<()>("changed", &[]);
+                // Diagrams that derive their layout ignore moves.
+                let changed = self
+                    .with_dyn(|current| !current.same_as(&*before))
+                    .unwrap_or(false);
+                if changed {
+                    imp.history.borrow_mut().record(before);
+                    self.emit_by_name::<()>("history-changed", &[]);
+                    self.emit_by_name::<()>("changed", &[]);
+                }
             }
             // Links to the same box are made in the properties panel, so a
             // stray click on a handle does not create one.
             Drag::Connect { from, cursor } => {
                 if let Some(to) = self.box_at(cursor).filter(|to| *to != from) {
-                    let mut index = 0;
+                    let mut index = None;
                     let _ = self.try_edit_dyn(|diagram| {
                         index = diagram.add_link(&from, &to);
                         Ok::<_, ()>(())
                     });
-                    self.select(Some(Selection::Link(index)));
+                    match index {
+                        Some(index) => self.select(Some(Selection::Link(index))),
+                        None => self.error_bell(),
+                    }
                 }
             }
             _ => {}
@@ -1017,6 +1063,7 @@ impl Exportable for BoxCanvas {
                 .boxes(&measure)
                 .into_iter()
                 .map(|(_, rect)| rect)
+                .chain(diagram.decorations(&measure))
                 .reduce(|a, b| a.union(&b))?;
             Some(
                 self.link_paths(diagram)

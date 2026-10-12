@@ -116,8 +116,8 @@ impl BoxDiagram for Erd {
         self.rename_entity(old, new)
     }
 
-    fn add_link(&mut self, from: &str, to: &str) -> usize {
-        self.add_relationship(from, to)
+    fn add_link(&mut self, from: &str, to: &str) -> Option<usize> {
+        Some(self.add_relationship(from, to))
     }
 
     fn remove_link(&mut self, index: usize) {
