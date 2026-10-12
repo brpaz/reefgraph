@@ -42,12 +42,13 @@ fn on_ellipse(r: &Rect, angle: f64, scale: f64) -> Point {
 }
 
 /// Outline of a node's shape; plain nodes are underlined instead.
-pub fn shape_path(cr: &cairo::Context, shape: Shape, r: &Rect) {
+pub fn shape_path(cr: &cairo::Context, shape: Option<Shape>, r: &Rect) {
+    let Some(shape) = shape else {
+        cr.move_to(r.x, r.y + r.h);
+        cr.line_to(r.x + r.w, r.y + r.h);
+        return;
+    };
     match shape {
-        Shape::Default => {
-            cr.move_to(r.x, r.y + r.h);
-            cr.line_to(r.x + r.w, r.y + r.h);
-        }
         Shape::Square => cr.rectangle(r.x, r.y, r.w, r.h),
         Shape::Rounded => rounded_rect(cr, r, r.h.min(24.0) / 2.5),
         Shape::Circle => circle(cr, r.center(), r.w.min(r.h) / 2.0),
@@ -96,7 +97,7 @@ pub fn shape_path(cr: &cairo::Context, shape: Shape, r: &Rect) {
 pub fn draw_node(
     cr: &cairo::Context,
     rect: &Rect,
-    shape: Shape,
+    shape: Option<Shape>,
     color: &gdk::RGBA,
     colors: &Colors,
     highlighted: bool,
@@ -104,7 +105,7 @@ pub fn draw_node(
     let stroke = if highlighted { &colors.accent } else { color };
     cr.set_line_width(if highlighted { 2.5 } else { 1.5 });
     shape_path(cr, shape, rect);
-    if shape != Shape::Default {
+    if shape.is_some() {
         set_color(cr, &colors.node_fill);
         cr.fill_preserve()?;
         set_color(cr, &color.with_alpha(0.18));

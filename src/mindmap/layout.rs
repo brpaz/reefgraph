@@ -13,15 +13,15 @@ const GAPS: (f64, f64) = (50.0, 14.0);
 
 pub fn node_size(node: &Node, text_size: impl Fn(&str) -> (f64, f64)) -> (f64, f64) {
     let (w, h) = text_size(&node.display());
-    match node.shape {
-        Shape::Default => (w + 16.0, h + 12.0),
-        Shape::Square | Shape::Rounded => (w + 24.0, h + 16.0),
-        Shape::Circle => {
+    match node.shape() {
+        None => (w + 16.0, h + 12.0),
+        Some(Shape::Square | Shape::Rounded) => (w + 24.0, h + 16.0),
+        Some(Shape::Circle) => {
             let d = w.max(h) + 24.0;
             (d, d)
         }
-        Shape::Bang | Shape::Cloud => (w + 44.0, h + 32.0),
-        Shape::Hexagon => (w + 44.0, h + 16.0),
+        Some(Shape::Bang | Shape::Cloud) => (w + 44.0, h + 32.0),
+        Some(Shape::Hexagon) => (w + 44.0, h + 16.0),
     }
 }
 

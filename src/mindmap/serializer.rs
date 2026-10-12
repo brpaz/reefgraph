@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::model::{Mindmap, Node};
+use super::model::{Form, Mindmap, Node};
 use super::parser::KEYWORD;
 
 const INDENT: &str = "  ";
@@ -27,8 +27,13 @@ pub fn serialize(mindmap: &Mindmap) -> String {
 
 fn write_node(out: &mut String, children: &HashMap<&str, Vec<&Node>>, node: &Node, depth: usize) {
     let indent = INDENT.repeat(depth);
-    let (open, close) = node.shape.delimiters();
-    out.push_str(&format!("{indent}{}{open}{}{close}\n", node.id, node.text));
+    match &node.form {
+        Form::Plain => out.push_str(&format!("{indent}{}\n", node.text)),
+        Form::Shaped { id, shape } => {
+            let (open, close) = shape.delimiters();
+            out.push_str(&format!("{indent}{id}{open}{}{close}\n", node.text));
+        }
+    }
     for extra in &node.extras {
         out.push_str(&format!("{indent}{extra}\n"));
     }
@@ -73,11 +78,11 @@ mindmap
     fn edited_mindmaps_parse_back_unchanged() {
         let mut m = parse("mindmap\n  Root").unwrap();
         let a = m
-            .add_node(Some("n0"), Shape::Hexagon, "Costs (net)")
+            .add_node(Some("n0"), Some(Shape::Hexagon), "Costs (net)")
             .unwrap();
-        let b = m.add_node(Some(&a), Shape::Default, "two\nlines").unwrap();
-        m.add_node(Some("n0"), Shape::Cloud, "Later").unwrap();
-        m.add_node(Some("n0"), Shape::Default, "f(x)").unwrap();
+        let b = m.add_node(Some(&a), None, "two\nlines").unwrap();
+        m.add_node(Some("n0"), Some(Shape::Cloud), "Later").unwrap();
+        m.add_node(Some("n0"), None, "f(x)").unwrap();
         m.reparent(&b, "n0");
         let back = parse(&serialize(&m)).unwrap();
         // Keys follow source order, which puts children after their parent.

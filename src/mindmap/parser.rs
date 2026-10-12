@@ -1,7 +1,7 @@
 //! Parser for Mermaid mindmaps. The hierarchy comes from indentation: a
 //! node's parent is the closest node above it that is indented less.
 
-use super::model::{Mindmap, Node, Shape};
+use super::model::{Form, Mindmap, Node, Shape};
 use crate::syntax::{ParseError, split_source};
 
 pub const KEYWORD: &str = "mindmap";
@@ -47,13 +47,12 @@ pub fn parse(src: &str) -> Result<Mindmap, ParseError> {
         if parent.is_none() && !mindmap.nodes.is_empty() {
             return Err(error("A mindmap has one root; indent this node below it"));
         }
-        let (id, shape, text) = parse_node(line).map_err(|m| error(&m))?;
+        let (form, text) = parse_node(line).map_err(|m| error(&m))?;
         let key = format!("n{}", mindmap.nodes.len());
         mindmap.nodes.push(Node {
             key: key.clone(),
-            id,
+            form,
             text,
-            shape,
             parent,
             extras: Vec::new(),
         });
@@ -76,16 +75,16 @@ fn indent_width(line: &str) -> usize {
         })
 }
 
-/// Splits a node line into id, shape and text. Quoted text, and text
+/// Splits a node line into its form and text. Quoted text, and text
 /// without an id-like prefix and shape delimiters, is a plain node.
-fn parse_node(line: &str) -> Result<(String, Shape, String), String> {
-    let start = match line.find(['[', '(', ')', '{']) {
-        Some(start) if !line.starts_with('"') => start,
-        _ => return Ok((String::new(), Shape::Default, line.to_string())),
+fn parse_node(line: &str) -> Result<(Form, String), String> {
+    let plain = || Ok((Form::Plain, line.to_string()));
+    let Some(start) = line.find(['[', '(', ')', '{']) else {
+        return plain();
     };
     let id = &line[..start];
-    if id.contains(char::is_whitespace) {
-        return Ok((String::new(), Shape::Default, line.to_string()));
+    if line.starts_with('"') || id.contains(char::is_whitespace) {
+        return plain();
     }
     let rest = &line[start..];
     // Longer delimiters first: `((` before `(`, `))` before `)`.
@@ -105,19 +104,16 @@ fn parse_node(line: &str) -> Result<(String, Shape, String), String> {
     let text = rest[open.len()..].strip_suffix(close).ok_or_else(|| {
         format!("Node text is missing its closing `{close}` (text spanning several lines is not supported yet)")
     })?;
-    Ok((id.to_string(), shape, text.to_string()))
+    let form = Form::Shaped {
+        id: id.to_string(),
+        shape,
+    };
+    Ok((form, text.to_string()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn summary(m: &Mindmap) -> Vec<(String, Shape, String, Option<String>)> {
-        m.nodes
-            .iter()
-            .map(|n| (n.id.clone(), n.shape, n.text.clone(), n.parent.clone()))
-            .collect()
-    }
 
     #[test]
     fn builds_the_tree_from_indentation() {
@@ -147,7 +143,7 @@ mod tests {
             ]
         );
         assert_eq!(m.nodes[2].extras, ["::icon(fa fa-book)"]);
-        assert_eq!(m.nodes[0].shape, Shape::Circle);
+        assert_eq!(m.nodes[0].shape(), Some(Shape::Circle));
         assert_eq!(m.nodes[0].display(), "mindmap");
     }
 
@@ -166,18 +162,28 @@ mod tests {
         g[\"`**Bold** text`\"]",
         )
         .unwrap();
-        let s = summary(&m);
-        assert_eq!(s[1].1, Shape::Square);
-        assert_eq!(s[2].1, Shape::Rounded);
-        assert_eq!(s[3].1, Shape::Circle);
-        assert_eq!(s[4].1, Shape::Bang);
-        assert_eq!(s[5].1, Shape::Cloud);
+        let shapes: Vec<_> = m.nodes[1..6].iter().map(Node::shape).collect();
+        use Shape::*;
         assert_eq!(
-            (s[6].0.as_str(), s[6].1, s[6].2.as_str()),
-            ("f", Shape::Hexagon, "I am a hexagon")
+            shapes,
+            [
+                Some(Square),
+                Some(Rounded),
+                Some(Circle),
+                Some(Bang),
+                Some(Cloud)
+            ]
         );
-        assert_eq!(s[7].1, Shape::Default);
-        assert_eq!(s[7].2, "Plain text (with parentheses)");
+        let hexagon = Form::Shaped {
+            id: "f".into(),
+            shape: Hexagon,
+        };
+        assert_eq!(
+            (&m.nodes[6].form, m.nodes[6].text.as_str()),
+            (&hexagon, "I am a hexagon")
+        );
+        assert_eq!(m.nodes[7].form, Form::Plain);
+        assert_eq!(m.nodes[7].text, "Plain text (with parentheses)");
         assert_eq!(m.nodes[8].display(), "**Bold** text");
     }
 
@@ -191,7 +197,7 @@ mod tests {
     #[test]
     fn quoted_plain_text_may_hold_delimiters() {
         let m = parse("mindmap\n  Root\n    \"f(x) {y}\"").unwrap();
-        assert_eq!(m.nodes[1].shape, Shape::Default);
+        assert_eq!(m.nodes[1].form, Form::Plain);
         assert_eq!(m.nodes[1].display(), "f(x) {y}");
     }
 

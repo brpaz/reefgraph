@@ -72,15 +72,16 @@ pub fn usecase_relation_kind(kind: UseCaseRelationKind) -> String {
     })
 }
 
-pub fn mindmap_shape(shape: MindmapShape) -> String {
+/// Name of a mindmap node shape; `None` is plain text.
+pub fn mindmap_shape(shape: Option<MindmapShape>) -> String {
     gettext(match shape {
-        MindmapShape::Default => "Text",
-        MindmapShape::Square => "Square",
-        MindmapShape::Rounded => "Rounded",
-        MindmapShape::Circle => "Circle",
-        MindmapShape::Bang => "Bang",
-        MindmapShape::Cloud => "Cloud",
-        MindmapShape::Hexagon => "Hexagon",
+        None => "Text",
+        Some(MindmapShape::Square) => "Square",
+        Some(MindmapShape::Rounded) => "Rounded",
+        Some(MindmapShape::Circle) => "Circle",
+        Some(MindmapShape::Bang) => "Bang",
+        Some(MindmapShape::Cloud) => "Cloud",
+        Some(MindmapShape::Hexagon) => "Hexagon",
     })
 }
 

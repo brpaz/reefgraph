@@ -94,11 +94,9 @@ impl BoxDiagram for Mindmap {
     }
 
     fn outline(&self, id: &str) -> Outline {
-        match self.node(id).map(|n| n.shape) {
+        match self.node(id).and_then(Node::shape) {
             Some(Shape::Circle | Shape::Cloud | Shape::Bang) => Outline::Ellipse,
-            Some(Shape::Default | Shape::Square | Shape::Rounded | Shape::Hexagon) | None => {
-                Outline::Rect
-            }
+            Some(Shape::Square | Shape::Rounded | Shape::Hexagon) | None => Outline::Rect,
         }
     }
 
@@ -136,7 +134,7 @@ impl BoxDiagram for Mindmap {
     }
 
     fn default_preset(&self) -> &'static str {
-        preset_id(Shape::Default)
+        preset_id(None)
     }
 
     /// New nodes go under the root, or become the root of an empty mindmap,
@@ -186,7 +184,7 @@ impl BoxDiagram for Mindmap {
     }
 
     fn add_row(&mut self, id: &str) -> Option<usize> {
-        self.add_node(Some(id), Shape::Default, &new_node_text())?;
+        self.add_node(Some(id), None, &new_node_text())?;
         Some(self.children(id).count() - 1)
     }
 
@@ -241,7 +239,7 @@ impl BoxDiagram for Mindmap {
             log_draw_error(render::draw_node(
                 cr,
                 rect,
-                node.shape,
+                node.shape(),
                 &color,
                 colors,
                 highlight.boxes.contains(&node.key),

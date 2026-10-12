@@ -3,11 +3,9 @@ use std::collections::HashMap;
 use crate::geometry::Point;
 use crate::syntax;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// Outline drawn around a shaped node's text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Shape {
-    /// Plain text without an id.
-    #[default]
-    Default,
     /// `id[text]`
     Square,
     /// `id(text)`
@@ -23,20 +21,9 @@ pub enum Shape {
 }
 
 impl Shape {
-    pub const ALL: [Shape; 7] = [
-        Shape::Default,
-        Shape::Square,
-        Shape::Rounded,
-        Shape::Circle,
-        Shape::Bang,
-        Shape::Cloud,
-        Shape::Hexagon,
-    ];
-
     /// Opening and closing delimiters around the text.
     pub fn delimiters(self) -> (&'static str, &'static str) {
         match self {
-            Shape::Default => ("", ""),
             Shape::Square => ("[", "]"),
             Shape::Rounded => ("(", ")"),
             Shape::Circle => ("((", "))"),
@@ -47,16 +34,22 @@ impl Shape {
     }
 }
 
+/// How a node is written: its text alone, or an id and the text inside a
+/// shape's delimiters.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Form {
+    Plain,
+    Shaped { id: String, shape: Shape },
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Node {
     /// Handle the editor refers to the node by; not written to the source,
     /// where plain-text nodes have no id.
     pub key: String,
-    /// Id written before a shaped node's text.
-    pub id: String,
+    pub form: Form,
     /// Text as written: plain, a `"string"` or a "`markdown string`".
     pub text: String,
-    pub shape: Shape,
     /// Key of the parent; `None` for the root.
     pub parent: Option<String>,
     /// `::icon(…)`, `:::class` and comment lines written after the node.
@@ -64,6 +57,14 @@ pub struct Node {
 }
 
 impl Node {
+    /// The outline around the text; `None` for plain text.
+    pub fn shape(&self) -> Option<Shape> {
+        match &self.form {
+            Form::Plain => None,
+            Form::Shaped { shape, .. } => Some(*shape),
+        }
+    }
+
     /// Text shown in the node.
     pub fn display(&self) -> String {
         syntax::label_text(&self.text)
@@ -153,17 +154,33 @@ impl Mindmap {
             .expect("key sequence is infinite")
     }
 
-    /// Id for a new shaped node: `id`, `id2`… unused by other nodes.
-    fn free_id(&self) -> String {
-        std::iter::once("id".to_string())
+    /// Form for a node of `shape`, with an id (`id`, `id2`…) unused by the
+    /// other nodes when it has a shape.
+    fn new_form(&self, shape: Option<Shape>) -> Form {
+        let Some(shape) = shape else {
+            return Form::Plain;
+        };
+        let taken = |id: &str| {
+            self.nodes
+                .iter()
+                .any(|n| matches!(&n.form, Form::Shaped { id: other, .. } if other == id))
+        };
+        let id = std::iter::once("id".to_string())
             .chain((2..).map(|i| format!("id{i}")))
-            .find(|id| !self.nodes.iter().any(|n| n.id == *id))
-            .expect("id sequence is infinite")
+            .find(|id| !taken(id))
+            .expect("id sequence is infinite");
+        Form::Shaped { id, shape }
     }
 
-    /// Adds a node of `shape` under `parent`, or as the root when `parent`
-    /// is `None` and there is none yet, and returns its key.
-    pub fn add_node(&mut self, parent: Option<&str>, shape: Shape, text: &str) -> Option<String> {
+    /// Adds a node under `parent`, or as the root when `parent` is `None`
+    /// and there is none yet, and returns its key. A `shape` of `None` makes
+    /// a plain-text node.
+    pub fn add_node(
+        &mut self,
+        parent: Option<&str>,
+        shape: Option<Shape>,
+        text: &str,
+    ) -> Option<String> {
         if parent.is_none() && self.root().is_some() {
             return None;
         }
@@ -173,16 +190,10 @@ impl Mindmap {
             return None;
         }
         let key = self.next_key();
-        let id = if shape == Shape::Default {
-            String::new()
-        } else {
-            self.free_id()
-        };
         let mut node = Node {
             key: key.clone(),
-            id,
+            form: self.new_form(shape),
             text: String::new(),
-            shape,
             parent: parent.map(String::from),
             extras: Vec::new(),
         };
@@ -191,18 +202,20 @@ impl Mindmap {
         Some(key)
     }
 
-    /// Changes a node's shape. Shaped nodes need an id; plain ones are
-    /// written as their text alone, so they drop it.
-    pub fn set_shape(&mut self, key: &str, shape: Shape) {
-        let id = self.free_id();
-        if let Some(node) = self.node_mut(key) {
-            node.shape = shape;
-            if shape == Shape::Default {
-                node.id.clear();
-            } else if node.id.is_empty() {
-                node.id = id;
-            }
-        }
+    /// Changes a node's shape, keeping its id while it stays shaped; `None`
+    /// makes it plain text.
+    pub fn set_shape(&mut self, key: &str, shape: Option<Shape>) {
+        let form = self.new_form(shape);
+        let Some(node) = self.node_mut(key) else {
+            return;
+        };
+        node.form = match (&mut node.form, form) {
+            (Form::Shaped { id, .. }, Form::Shaped { shape, .. }) => Form::Shaped {
+                id: std::mem::take(id),
+                shape,
+            },
+            (_, form) => form,
+        };
     }
 
     /// Removes a node and everything below it. The root goes only when it is
@@ -248,14 +261,10 @@ impl Mindmap {
             .filter(|p| self.node(p).is_some())
             .or_else(|| self.root().map(|r| r.key.clone()))?;
         let key = self.next_key();
-        let id = if node.id.is_empty() {
-            String::new()
-        } else {
-            self.free_id()
-        };
+        let form = self.new_form(node.shape());
         self.nodes.push(Node {
             key: key.clone(),
-            id,
+            form,
             parent: Some(parent),
             ..node.clone()
         });
@@ -269,10 +278,10 @@ mod tests {
 
     fn tree() -> Mindmap {
         let mut m = Mindmap::default();
-        let root = m.add_node(None, Shape::Circle, "Root").unwrap();
-        let a = m.add_node(Some(&root), Shape::Default, "A").unwrap();
-        m.add_node(Some(&a), Shape::Default, "B").unwrap();
-        m.add_node(Some(&root), Shape::Square, "C").unwrap();
+        let root = m.add_node(None, Some(Shape::Circle), "Root").unwrap();
+        let a = m.add_node(Some(&root), None, "A").unwrap();
+        m.add_node(Some(&a), None, "B").unwrap();
+        m.add_node(Some(&root), Some(Shape::Square), "C").unwrap();
         m
     }
 
@@ -281,13 +290,17 @@ mod tests {
         let m = tree();
         let keys: Vec<_> = m.nodes.iter().map(|n| n.key.as_str()).collect();
         assert_eq!(keys, ["n0", "n1", "n2", "n3"]);
-        assert_eq!(
-            (m.nodes[0].id.as_str(), m.nodes[3].id.as_str()),
-            ("id", "id2")
-        );
-        assert_eq!(m.nodes[1].id, "");
+        let ids: Vec<_> = m
+            .nodes
+            .iter()
+            .map(|n| match &n.form {
+                Form::Plain => None,
+                Form::Shaped { id, .. } => Some(id.as_str()),
+            })
+            .collect();
+        assert_eq!(ids, [Some("id"), None, None, Some("id2")]);
         let mut m = m;
-        assert_eq!(m.add_node(None, Shape::Default, "Second root"), None);
+        assert_eq!(m.add_node(None, None, "Second root"), None);
     }
 
     #[test]
@@ -311,12 +324,18 @@ mod tests {
     }
 
     #[test]
-    fn plain_nodes_drop_their_id() {
+    fn shape_changes_keep_or_drop_the_id() {
         let mut m = tree();
-        m.set_shape("n3", Shape::Default);
-        assert_eq!(m.node("n3").unwrap().id, "");
-        m.set_shape("n3", Shape::Hexagon);
-        assert_eq!(m.node("n3").unwrap().id, "id2");
+        m.set_shape("n3", Some(Shape::Hexagon));
+        let hexagon = Form::Shaped {
+            id: "id2".into(),
+            shape: Shape::Hexagon,
+        };
+        assert_eq!(m.node("n3").unwrap().form, hexagon);
+        m.set_shape("n3", None);
+        assert_eq!(m.node("n3").unwrap().form, Form::Plain);
+        m.set_shape("n1", Some(Shape::Cloud));
+        assert_eq!(m.node("n1").unwrap().shape(), Some(Shape::Cloud));
     }
 
     #[test]

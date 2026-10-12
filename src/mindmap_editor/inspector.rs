@@ -6,10 +6,11 @@ use adw::prelude::*;
 use adw::subclass::prelude::*;
 use gtk::glib;
 
+use super::SHAPES;
 use crate::box_canvas::{BoxCanvas as Canvas, Selection};
 use crate::combo::{index_of, string_list};
 use crate::labels;
-use crate::mindmap::{Mindmap, Shape};
+use crate::mindmap::Mindmap;
 
 mod imp {
     use super::*;
@@ -102,7 +103,7 @@ impl Inspector {
     fn setup_rows(&self) {
         let imp = self.imp();
         imp.node_shape_row
-            .set_model(Some(&string_list(Shape::ALL.map(labels::mindmap_shape))));
+            .set_model(Some(&string_list(SHAPES.map(labels::mindmap_shape))));
 
         imp.node_text_row.connect_apply(glib::clone!(
             #[weak(rename_to = inspector)]
@@ -128,7 +129,7 @@ impl Inspector {
                 if inspector.imp().updating.get() {
                     return;
                 }
-                let shape = Shape::ALL[row.selected() as usize];
+                let shape = SHAPES[row.selected() as usize];
                 if let Some((canvas, key)) = inspector.selected_node() {
                     canvas.edit::<Mindmap>(|m| m.set_shape(&key, shape));
                 }
@@ -163,7 +164,7 @@ impl Inspector {
                     let n = m.node(&key)?;
                     // The root goes only with its children, which is refused.
                     let deletable = n.parent.is_some() || m.nodes.len() == 1;
-                    Some((n.display(), n.shape, deletable))
+                    Some((n.display(), n.shape(), deletable))
                 })
                 .flatten()
         });
@@ -171,8 +172,7 @@ impl Inspector {
             Some((text, shape, deletable)) => {
                 imp.delete_node_button.set_sensitive(deletable);
                 imp.node_text_row.set_text(&text);
-                imp.node_shape_row
-                    .set_selected(index_of(&Shape::ALL, &shape));
+                imp.node_shape_row.set_selected(index_of(&SHAPES, &shape));
                 imp.stack.set_visible_child_name("node");
             }
             None => imp.stack.set_visible_child_name("diagram"),
