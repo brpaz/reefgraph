@@ -1,6 +1,6 @@
 # Reefgraph
 
-> Visual WYSIWYG editor for Mermaid diagrams
+> Visual WYSIWYG editor for Mermaid diagrams for Linux. Built with GTK, Rust and LibAdwaita.
 
 [![CI](https://img.shields.io/github/actions/workflow/status/brpaz/reefgraph/ci.yml?branch=main&label=CI&logo=github&style=for-the-badge)](https://github.com/brpaz/reefgraph/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE.md)
@@ -11,6 +11,10 @@
 ![Main window](data/resources/screenshots/screenshot1.png "Main window")
 
 </div>
+
+## AI Usage notice
+
+This project was fully vibecoded in a Weekend using Claude Opus 5.5 to solve a personal itch. Use it at your own risk.
 
 ## Features
 
