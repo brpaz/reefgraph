@@ -124,8 +124,9 @@ pub fn position_comment(comment: &str) -> Option<(String, Point)> {
     }
     let mut parts = meta.split_whitespace();
     let id = parts.next()?.to_string();
-    let x = parts.next()?.parse().ok()?;
-    let y = parts.next()?.parse().ok()?;
+    // `NaN` and `inf` parse as numbers but cannot be drawn.
+    let x = parts.next()?.parse().ok().filter(|v: &f64| v.is_finite())?;
+    let y = parts.next()?.parse().ok().filter(|v: &f64| v.is_finite())?;
     parts.next().is_none().then(|| (id, Point::new(x, y)))
 }
 
@@ -187,6 +188,8 @@ mod tests {
         );
         assert_eq!(position_comment(" @merman pos A x"), None);
         assert_eq!(position_comment(" @merman pos A 1 2 3"), None);
+        assert_eq!(position_comment(" @merman pos A NaN 2"), None);
+        assert_eq!(position_comment(" @merman pos A 1 inf"), None);
         assert_eq!(position_comment(" @merman posX A 1 2"), None);
         assert_eq!(position_comment(" plain comment"), None);
     }
