@@ -234,7 +234,7 @@ impl MermanApplicationWindow {
                         glib::clone!(
                             #[weak]
                             win,
-                            move |kind| win.spawn_new_document(kind)
+                            move |source| win.spawn_new_document(source)
                         ),
                     )
                 })
@@ -681,11 +681,12 @@ impl MermanApplicationWindow {
         chosen.get()
     }
 
-    fn spawn_new_document(&self, kind: DiagramKind) {
+    fn spawn_new_document(&self, source: &str) {
         let win = self.clone();
+        let source = source.to_owned();
         glib::spawn_future_local(async move {
             if win.confirm_discard().await {
-                win.load_text(kind.template(), None);
+                win.load_text(&source, None);
             }
         });
     }

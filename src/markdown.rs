@@ -176,6 +176,17 @@ impl Fence {
     }
 }
 
+/// Diagram sources in pasted text: the Mermaid blocks of a Markdown
+/// snippet, or else the whole text.
+pub fn pasted_diagrams(text: &str) -> Vec<String> {
+    let blocks = mermaid_blocks(text);
+    if blocks.is_empty() {
+        vec![text.to_owned()]
+    } else {
+        blocks.iter().map(|block| block.source(text)).collect()
+    }
+}
+
 /// Whether a file name is that of a Markdown document.
 pub fn is_markdown_name(name: &str) -> bool {
     let name = name.to_ascii_lowercase();
@@ -283,6 +294,18 @@ fn main() {}
             embedding.replace("graph TD"),
             "````mermaid title\ngraph TD\n  ````\nafter\n"
         );
+    }
+
+    #[test]
+    fn pasted_text_is_split_into_mermaid_blocks() {
+        assert_eq!(
+            pasted_diagrams(DOC),
+            [
+                "flowchart TD\n    A --> B\n",
+                "sequenceDiagram\n\n    A->>B: hi\n"
+            ]
+        );
+        assert_eq!(pasted_diagrams("graph LR\nA-->B"), ["graph LR\nA-->B"]);
     }
 
     #[test]

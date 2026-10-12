@@ -37,7 +37,7 @@ src/
 data/resources/ui/*.blp  # Blueprint templates for window, palette, inspectors, shortcuts
 ```
 
-New documents are created from the **New Diagram** dialog (Ctrl+N or the "+" header button). It lists `DiagramKind::ALL`; each tile shows the kind's sample diagram rendered with the export code, a name and a description from `labels.rs`. Adding a diagram type to the dialog takes a `DiagramKind` variant with a template and sample, its labels, and a preview arm in `new_diagram.rs`.
+New documents are created from the **New Diagram** dialog (Ctrl+N or the "+" header button). Its **From Clipboard** section reads the clipboard text when the dialog opens and offers a tile for every diagram in it that parses: the whole text, or each `mermaid` block when it is Markdown (`markdown::pasted_diagrams`). Invalid text yields no tile, so the current document is never replaced by a broken one. Below it, **Empty Diagram** lists `DiagramKind::ALL`; each tile shows the kind's sample diagram rendered with the export code, a name and a description from `labels.rs`. The dialog hands the window the chosen source text, which it loads as an untitled document. Adding a diagram type to the dialog takes a `DiagramKind` variant with a template and sample, its labels, and a preview arm in `new_diagram.rs`.
 
 Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its properties panel. Editor modules depend on the domain and the shared modules, never on each other.
 
