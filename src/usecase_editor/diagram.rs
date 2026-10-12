@@ -71,7 +71,7 @@ impl BoxDiagram for UseCaseDiagram {
     fn outline(&self, id: &str) -> Outline {
         match self.element(id).map(|e| e.kind) {
             Some(ElementKind::UseCase) => Outline::Ellipse,
-            _ => Outline::Rect,
+            Some(ElementKind::Actor | ElementKind::UseCaseRect) | None => Outline::Rect,
         }
     }
 
@@ -206,8 +206,13 @@ impl BoxDiagram for UseCaseDiagram {
             let text = match r.kind {
                 RelationKind::Include => "«include»".to_string(),
                 RelationKind::Extend => "«extend»".to_string(),
-                kind if kind.is_labelled() => r.label.display(""),
-                _ => String::new(),
+                RelationKind::Line | RelationKind::Arrow => r.label.display(""),
+                RelationKind::ArrowBack
+                | RelationKind::CircleTo
+                | RelationKind::CircleFrom
+                | RelationKind::CrossTo
+                | RelationKind::CrossFrom
+                | RelationKind::Generalization => String::new(),
             };
             if path.len() >= 2 && !text.is_empty() {
                 let at = routing::path_midpoint(path);

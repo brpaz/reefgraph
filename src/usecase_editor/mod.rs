@@ -32,7 +32,7 @@ pub fn palette_items() -> Vec<PaletteItem> {
             preview: Box::new(move |cr, r| render::preview_path(cr, kind, r)),
             aspect: match kind {
                 ElementKind::Actor => 0.8,
-                _ => 1.6,
+                ElementKind::UseCase | ElementKind::UseCaseRect => 1.6,
             },
         })
         .collect()

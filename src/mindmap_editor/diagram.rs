@@ -96,7 +96,9 @@ impl BoxDiagram for Mindmap {
     fn outline(&self, id: &str) -> Outline {
         match self.node(id).map(|n| n.shape) {
             Some(Shape::Circle | Shape::Cloud | Shape::Bang) => Outline::Ellipse,
-            _ => Outline::Rect,
+            Some(Shape::Default | Shape::Square | Shape::Rounded | Shape::Hexagon) | None => {
+                Outline::Rect
+            }
         }
     }
 

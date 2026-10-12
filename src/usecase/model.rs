@@ -63,7 +63,17 @@ impl RelationKind {
 
     /// Associations that can carry a label and extra length.
     pub fn is_labelled(self) -> bool {
-        matches!(self, RelationKind::Line | RelationKind::Arrow)
+        match self {
+            RelationKind::Line | RelationKind::Arrow => true,
+            RelationKind::ArrowBack
+            | RelationKind::CircleTo
+            | RelationKind::CircleFrom
+            | RelationKind::CrossTo
+            | RelationKind::CrossFrom
+            | RelationKind::Include
+            | RelationKind::Extend
+            | RelationKind::Generalization => false,
+        }
     }
 }
 

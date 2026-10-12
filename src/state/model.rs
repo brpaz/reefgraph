@@ -39,7 +39,7 @@ impl StateKind {
             StateKind::Choice => Some("choice"),
             StateKind::Fork => Some("fork"),
             StateKind::Join => Some("join"),
-            _ => None,
+            StateKind::State | StateKind::Start | StateKind::End => None,
         }
     }
 
@@ -51,7 +51,10 @@ impl StateKind {
 
     /// Whether states of this kind are `[*]` rather than named states.
     pub fn is_terminal(self) -> bool {
-        matches!(self, StateKind::Start | StateKind::End)
+        match self {
+            StateKind::Start | StateKind::End => true,
+            StateKind::State | StateKind::Choice | StateKind::Fork | StateKind::Join => false,
+        }
     }
 }
 
@@ -145,7 +148,7 @@ impl StateDiagram {
         let idx = match state.kind {
             StateKind::Start => 0,
             StateKind::End => self.states.len(),
-            _ => self
+            StateKind::State | StateKind::Choice | StateKind::Fork | StateKind::Join => self
                 .states
                 .iter()
                 .position(|s| s.kind == StateKind::End)

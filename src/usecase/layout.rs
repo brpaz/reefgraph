@@ -54,7 +54,7 @@ pub fn text_center(e: &Element, rect: &Rect, text_size: impl Fn(&str) -> (f64, f
             let (_, h) = text_block(e, &text_size);
             Point::new(rect.center().x, rect.y + rect.h - h / 2.0)
         }
-        _ => rect.center(),
+        ElementKind::UseCase | ElementKind::UseCaseRect => rect.center(),
     }
 }
 

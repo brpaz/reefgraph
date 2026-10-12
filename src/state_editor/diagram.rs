@@ -66,7 +66,7 @@ impl BoxDiagram for StateDiagram {
         match self.state(id).map(|s| s.kind) {
             Some(StateKind::Start | StateKind::End) => Outline::Ellipse,
             Some(StateKind::Choice) => Outline::Diamond,
-            _ => Outline::Rect,
+            Some(StateKind::State | StateKind::Fork | StateKind::Join) | None => Outline::Rect,
         }
     }
 
@@ -76,7 +76,7 @@ impl BoxDiagram for StateDiagram {
         match state.kind {
             StateKind::Start | StateKind::End => None,
             StateKind::State => Some(state.label.clone()),
-            _ => Some(state.id.clone()),
+            StateKind::Choice | StateKind::Fork | StateKind::Join => Some(state.id.clone()),
         }
     }
 

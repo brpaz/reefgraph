@@ -45,7 +45,7 @@ pub fn palette_items() -> Vec<PaletteItem> {
             preview: Box::new(move |cr, r| render::preview_path(cr, kind, r)),
             aspect: match kind {
                 StateKind::State | StateKind::Fork | StateKind::Join => 1.6,
-                _ => 1.0,
+                StateKind::Start | StateKind::End | StateKind::Choice => 1.0,
             },
         })
         .collect()

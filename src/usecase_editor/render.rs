@@ -107,6 +107,21 @@ enum Mark {
     Triangle,
 }
 
+/// Include and extend are dashed; associations and generalization solid.
+fn is_dashed(kind: RelationKind) -> bool {
+    match kind {
+        RelationKind::Include | RelationKind::Extend => true,
+        RelationKind::Line
+        | RelationKind::Arrow
+        | RelationKind::ArrowBack
+        | RelationKind::CircleTo
+        | RelationKind::CircleFrom
+        | RelationKind::CrossTo
+        | RelationKind::CrossFrom
+        | RelationKind::Generalization => false,
+    }
+}
+
 fn marks(kind: RelationKind) -> (Mark, Mark) {
     match kind {
         RelationKind::Line => (Mark::None, Mark::None),
@@ -150,7 +165,7 @@ pub fn draw_relation(
     }
     set_color(cr, color);
     cr.set_line_width(width);
-    if matches!(kind, RelationKind::Include | RelationKind::Extend) {
+    if is_dashed(kind) {
         cr.set_dash(&[6.0, 4.0], 0.0);
     }
     cr.move_to(points[0].x, points[0].y);
