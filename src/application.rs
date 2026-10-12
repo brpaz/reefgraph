@@ -50,7 +50,12 @@ mod imp {
             self.activate();
             let window = self.obj().main_window();
             if let Some(file) = files.first().cloned() {
-                glib::spawn_future_local(async move { window.load_file(&file).await });
+                // A file opened from outside must not drop unsaved work.
+                glib::spawn_future_local(async move {
+                    if window.confirm_discard().await {
+                        window.load_file(&file).await;
+                    }
+                });
             }
         }
 

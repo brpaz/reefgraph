@@ -686,7 +686,7 @@ impl MermanApplicationWindow {
 
     /// Asks what to do with unsaved changes. Returns whether the caller may
     /// discard the current document.
-    async fn confirm_discard(&self) -> bool {
+    pub(crate) async fn confirm_discard(&self) -> bool {
         if !self.imp().dirty.get() {
             return true;
         }
