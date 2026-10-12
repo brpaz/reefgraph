@@ -33,4 +33,4 @@ jobs:
         with:
           branch: ${{ github.event.release.target_commitish }}
           commit_message: "chore(release): [skip-ci] ${{ github.event.release.tag_name }}"
-          file_pattern:  CHANGELOG.md data/dev.brunopaz.Merman.metainfo.xml.in.in
+          file_pattern:  CHANGELOG.md data/dev.brunopaz.Reefgraph.metainfo.xml.in.in

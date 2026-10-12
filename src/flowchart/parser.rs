@@ -576,7 +576,7 @@ mod tests {
     #[test]
     fn reads_positions_from_comments() {
         let chart =
-            parse("flowchart TD\n  A --> B\n%% @merman pos A 10 20.5\n%% @merman pos Z 1 1")
+            parse("flowchart TD\n  A --> B\n%% @reefgraph pos A 10 20.5\n%% @reefgraph pos Z 1 1")
                 .unwrap();
         assert_eq!(chart.nodes[0].pos, Some(Point::new(10.0, 20.5)));
         assert_eq!(chart.nodes[1].pos, None);
@@ -585,11 +585,12 @@ mod tests {
 
     #[test]
     fn keeps_unreadable_position_comments_as_comments() {
-        let chart = parse("flowchart TD\n  A\n%% @merman pos A x y\n%% @merman possible").unwrap();
+        let chart =
+            parse("flowchart TD\n  A\n%% @reefgraph pos A x y\n%% @reefgraph possible").unwrap();
         assert_eq!(chart.nodes[0].pos, None);
         assert_eq!(
             chart.passthrough,
-            ["%% @merman pos A x y", "%% @merman possible"]
+            ["%% @reefgraph pos A x y", "%% @reefgraph possible"]
         );
     }
 

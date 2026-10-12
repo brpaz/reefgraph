@@ -1,0 +1,130 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ReefgraphUseCaseInspector: Adw.Bin {
+  child: Stack stack {
+    transition-type: crossfade;
+    vhomogeneous: false;
+
+    StackPage {
+      name: "diagram";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Use Case Diagram");
+          description: _("Drag from an actor or use case's handles to relate it to another. Double-click an element to rename it.");
+
+          Adw.ComboRow direction_row {
+            title: _("Direction");
+          }
+
+          Adw.ActionRow {
+            title: _("Auto Layout");
+            subtitle: _("Discard manual positions");
+            activatable-widget: layout_button;
+
+            [suffix]
+            Button layout_button {
+              label: _("Arrange");
+              valign: center;
+            }
+          }
+        }
+
+        Adw.PreferencesGroup boundaries_group {
+          title: _("System Boundaries");
+          description: _("A boundary is drawn around the elements placed in it.");
+
+          header-suffix: Button add_boundary_button {
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Add System Boundary");
+            valign: center;
+
+            styles [
+              "flat",
+            ]
+          };
+        }
+      };
+    }
+
+    StackPage {
+      name: "element";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Element");
+
+          Adw.EntryRow element_id_row {
+            title: _("Id");
+            show-apply-button: true;
+          }
+
+          Adw.EntryRow element_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow element_kind_row {
+            title: _("Type");
+          }
+
+          Adw.ComboRow element_boundary_row {
+            title: _("System Boundary");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_element_button {
+            label: _("Delete Element");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+
+    StackPage {
+      name: "relation";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Relationship");
+
+          Adw.ComboRow relation_kind_row {
+            title: _("Type");
+          }
+
+          Adw.EntryRow relation_label_row {
+            title: _("Label");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow relation_from_row {
+            title: _("From");
+          }
+
+          Adw.ComboRow relation_to_row {
+            title: _("To");
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_relation_button {
+            label: _("Delete Relationship");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+  };
+}

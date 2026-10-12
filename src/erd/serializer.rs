@@ -92,8 +92,8 @@ erDiagram
     ORDER ||--|{ \"LINE ITEM\" : contains
     p }o..o| a : \"logs in as\"
     %% kept
-%% @merman pos CUSTOMER 100 80
-%% @merman pos ORDER 300 80
+%% @reefgraph pos CUSTOMER 100 80
+%% @reefgraph pos ORDER 300 80
 ";
 
     #[test]

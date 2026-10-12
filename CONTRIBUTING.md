@@ -1,4 +1,4 @@
-# Contributing to Merman
+# Contributing to Reefgraph
 
 This document outlines the guidelines and best practices for contributing to the project. Please take a moment to read through it before submitting a pull request.
 
@@ -69,8 +69,8 @@ Plus [Task](https://taskfile.dev/), [Lefthook](https://lefthook.dev/), [commitli
 ### Running the Development Environment
 
 ```bash
-git clone https://github.com/brpaz/merman
-cd merman
+git clone https://github.com/brpaz/reefgraph
+cd reefgraph
 direnv allow
 ```
 

@@ -7,7 +7,7 @@ Accepted
 Class diagrams and entity relationship diagrams are edited the same way: boxes with rows are moved by dragging, linked by dragging from handles, given rows with a "+" button and edited in place, with undo and pan/zoom. The class diagram canvas started as a copy of the ERD canvas, leaving two widgets of about 900 lines that differed only in model type, box geometry, rendering and how edited text applies. Fixes had to be made twice and had started to drift.
 
 ## Decision
-- One widget, `MermanBoxCanvas`, implements the interaction once and edits any type implementing the `BoxDiagram` trait: box geometry (`boxes`, `box_rect`, `header_center`), labels and row text, adding/removing boxes, links and rows, layout and rendering.
+- One widget, `ReefgraphBoxCanvas`, implements the interaction once and edits any type implementing the `BoxDiagram` trait: box geometry (`boxes`, `box_rect`, `header_center`), labels and row text, adding/removing boxes, links and rows, layout and rendering.
 - The canvas stores the diagram as `Box<dyn BoxDiagram>`. Undo history clones it through `clone_diagram`, and change detection compares through `same_as`.
 - Inspectors and the window, which know the concrete type, use `BoxCanvas::with::<M>` and `BoxCanvas::edit::<M>`. These downcast through `Any` and do nothing when the canvas holds another type.
 - Flowcharts and sequence diagrams keep their own canvases: free-form shapes and lifeline rows interact differently enough that sharing would need more configuration than code it saves.

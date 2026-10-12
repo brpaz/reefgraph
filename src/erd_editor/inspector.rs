@@ -17,7 +17,7 @@ mod imp {
     use super::*;
 
     #[derive(Debug, Default, gtk::CompositeTemplate)]
-    #[template(resource = "/dev/brunopaz/Merman/ui/erd-inspector.ui")]
+    #[template(resource = "/dev/brunopaz/Reefgraph/ui/erd-inspector.ui")]
     pub struct Inspector {
         #[template_child]
         pub stack: TemplateChild<gtk::Stack>,
@@ -61,7 +61,7 @@ mod imp {
 
     #[glib::object_subclass]
     impl ObjectSubclass for Inspector {
-        const NAME: &'static str = "MermanErdInspector";
+        const NAME: &'static str = "ReefgraphErdInspector";
         type Type = super::Inspector;
         type ParentType = adw::Bin;
 
@@ -364,6 +364,8 @@ impl Inspector {
         for (index, attribute) in attributes.iter().enumerate() {
             let row = adw::EntryRow::builder()
                 .title(&attribute.name)
+                // Titles come from the opened file.
+                .use_markup(false)
                 .text(attribute.to_line())
                 .show_apply_button(true)
                 .build();

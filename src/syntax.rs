@@ -5,7 +5,10 @@ use std::fmt;
 use crate::geometry::Point;
 
 /// Marker of the comment lines that store manually placed node positions.
-const POSITION_META: &str = "@merman pos";
+const POSITION_META: &str = "@reefgraph pos";
+/// Marker written before the app was renamed to Reefgraph; still read so
+/// files saved then keep their layout.
+const LEGACY_POSITION_META: &str = "@merman pos";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseError {
@@ -115,17 +118,21 @@ pub fn split_statements(line: &str) -> Vec<&str> {
     statements
 }
 
-/// Reads a `%% @merman pos <id> <x> <y>` comment, given the text after
+/// Reads a `%% @reefgraph pos <id> <x> <y>` comment, given the text after
 /// `%%`. Anything else, including comments that only look similar, is `None`.
 pub fn position_comment(comment: &str) -> Option<(String, Point)> {
-    let meta = comment.trim_start().strip_prefix(POSITION_META)?;
+    let comment = comment.trim_start();
+    let meta = comment
+        .strip_prefix(POSITION_META)
+        .or_else(|| comment.strip_prefix(LEGACY_POSITION_META))?;
     if !meta.starts_with(char::is_whitespace) {
         return None;
     }
     let mut parts = meta.split_whitespace();
     let id = parts.next()?.to_string();
-    let x = parts.next()?.parse().ok()?;
-    let y = parts.next()?.parse().ok()?;
+    // `NaN` and `inf` parse as numbers but cannot be drawn.
+    let x = parts.next()?.parse().ok().filter(|v: &f64| v.is_finite())?;
+    let y = parts.next()?.parse().ok().filter(|v: &f64| v.is_finite())?;
     parts.next().is_none().then(|| (id, Point::new(x, y)))
 }
 
@@ -139,6 +146,41 @@ pub fn strip_editor_comments(src: &str) -> String {
                 .is_none_or(|comment| position_comment(comment).is_none())
         })
         .collect()
+}
+
+/// Entity codes Mermaid uses for characters the syntax reserves.
+const ENTITIES: [(&str, &str); 7] = [
+    ("#quot;", "\""),
+    ("#39;", "'"),
+    ("#40;", "("),
+    ("#41;", ")"),
+    ("#91;", "["),
+    ("#93;", "]"),
+    ("#96;", "`"),
+];
+
+/// Text shown for a label written as plain text, a `"string"` or a
+/// "`markdown string`", with entity codes decoded.
+pub fn label_text(raw: &str) -> String {
+    let raw = raw.trim();
+    let text = raw
+        .strip_prefix('"')
+        .and_then(|r| r.strip_suffix('"'))
+        .map(|inner| {
+            inner
+                .strip_prefix('`')
+                .and_then(|r| r.strip_suffix('`'))
+                .unwrap_or(inner)
+        })
+        .unwrap_or(raw);
+    ENTITIES
+        .iter()
+        .fold(text.to_string(), |t, (code, c)| t.replace(code, c))
+}
+
+/// Quoted label for text typed by the user, so any character is allowed.
+pub fn quote_label(text: &str) -> String {
+    format!("\"{}\"", text.replace('"', "#quot;"))
 }
 
 /// Comment line storing a node position, rounded to whole units.
@@ -179,32 +221,49 @@ mod tests {
     #[test]
     fn reads_and_writes_position_comments() {
         let line = position_line("A", Point::new(10.4, -2.6));
-        assert_eq!(line, "%% @merman pos A 10 -3");
+        assert_eq!(line, "%% @reefgraph pos A 10 -3");
         let comment = line.strip_prefix("%%").unwrap();
         assert_eq!(
             position_comment(comment),
             Some(("A".into(), Point::new(10.0, -3.0)))
         );
-        assert_eq!(position_comment(" @merman pos A x"), None);
-        assert_eq!(position_comment(" @merman pos A 1 2 3"), None);
-        assert_eq!(position_comment(" @merman posX A 1 2"), None);
+        assert_eq!(position_comment(" @reefgraph pos A x"), None);
+        assert_eq!(position_comment(" @reefgraph pos A 1 2 3"), None);
+        assert_eq!(position_comment(" @reefgraph pos A NaN 2"), None);
+        assert_eq!(position_comment(" @reefgraph pos A 1 inf"), None);
+        assert_eq!(position_comment(" @reefgraph posX A 1 2"), None);
+        assert_eq!(
+            position_comment(" @merman pos B 3 4"),
+            Some(("B".into(), Point::new(3.0, 4.0)))
+        );
         assert_eq!(position_comment(" plain comment"), None);
     }
 
     #[test]
     fn strips_only_editor_comments() {
-        let src = "flowchart TD\n    A --> B\n    %% keep me\n%% @merman pos A 1 2\n  %% @merman pos B 3 4\n%% @merman possible rename\n%% @merman pos C x\n";
+        let src = "flowchart TD\n    A --> B\n    %% keep me\n%% @reefgraph pos A 1 2\n  %% @reefgraph pos B 3 4\n%% @reefgraph possible rename\n%% @reefgraph pos C x\n";
         assert_eq!(
             strip_editor_comments(src),
-            "flowchart TD\n    A --> B\n    %% keep me\n%% @merman possible rename\n%% @merman pos C x\n"
+            "flowchart TD\n    A --> B\n    %% keep me\n%% @reefgraph possible rename\n%% @reefgraph pos C x\n"
         );
         assert_eq!(strip_editor_comments("graph TD"), "graph TD");
     }
 
     #[test]
     fn stripping_keeps_line_endings() {
-        let src = "graph TD\r\n%% @merman pos A 1 2\r\nA --> B\r\n";
+        let src = "graph TD\r\n%% @reefgraph pos A 1 2\r\nA --> B\r\n";
         assert_eq!(strip_editor_comments(src), "graph TD\r\nA --> B\r\n");
+    }
+
+    #[test]
+    fn decodes_and_quotes_labels() {
+        assert_eq!(label_text("Sign in"), "Sign in");
+        assert_eq!(label_text("\"Sign in\""), "Sign in");
+        assert_eq!(label_text("\"`**Bold**`\""), "**Bold**");
+        assert_eq!(label_text("\"Refund #40;partial#41;\""), "Refund (partial)");
+        let quoted = quote_label("Say \"hi\"");
+        assert_eq!(quoted, "\"Say #quot;hi#quot;\"");
+        assert_eq!(label_text(&quoted), "Say \"hi\"");
     }
 
     #[test]

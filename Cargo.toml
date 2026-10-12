@@ -1,5 +1,5 @@
 [package]
-name = "merman"
+name = "reefgraph"
 authors = ["Bruno Paz <bruno@brunopaz.dev>"]
 edition = "2024"
 

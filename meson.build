@@ -1,5 +1,5 @@
 project(
-  'merman',
+  'reefgraph',
   'rust',
   version: files('VERSION'),
   meson_version: '>= 0.59',
@@ -9,7 +9,7 @@ project(
 i18n = import('i18n')
 gnome = import('gnome')
 
-base_id = 'dev.brunopaz.Merman'
+base_id = 'dev.brunopaz.Reefgraph'
 
 dependency('glib-2.0', version: '>= 2.66')
 dependency('gio-2.0', version: '>= 2.66')

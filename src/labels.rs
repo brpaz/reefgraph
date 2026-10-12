@@ -2,18 +2,26 @@
 
 use gettextrs::gettext;
 
+use crate::c4::{BoundaryKind, ElementKind, ElementShape, Level};
 use crate::class_diagram::Head as ClassHead;
 use crate::diagram::DiagramKind;
 use crate::erd::Cardinality;
 use crate::flowchart::{Direction, Head, NodeShape, Stroke};
+use crate::mindmap::Shape as MindmapShape;
 use crate::sequence::{ArrowHead, BlockKind, LineStyle, NotePlacement, ParticipantKind};
+use crate::state::StateKind;
+use crate::usecase::{ElementKind as UseCaseElementKind, RelationKind as UseCaseRelationKind};
 
 pub fn diagram_kind(kind: DiagramKind) -> String {
     gettext(match kind {
         DiagramKind::Flowchart => "Flowchart",
         DiagramKind::Sequence => "Sequence Diagram",
+        DiagramKind::State => "State Diagram",
+        DiagramKind::UseCase => "Use Case Diagram",
+        DiagramKind::Mindmap => "Mindmap",
         DiagramKind::Class => "Class Diagram",
         DiagramKind::Erd => "Entity Relationship Diagram",
+        DiagramKind::C4 => "C4 Diagram",
     })
 }
 
@@ -21,8 +29,93 @@ pub fn diagram_kind_description(kind: DiagramKind) -> String {
     gettext(match kind {
         DiagramKind::Flowchart => "Processes and decisions as shapes joined by arrows",
         DiagramKind::Sequence => "Messages exchanged between participants over time",
+        DiagramKind::State => "States of a system and the transitions between them",
+        DiagramKind::UseCase => "Actors and the use cases they take part in",
+        DiagramKind::Mindmap => "Ideas branching out from a central topic",
         DiagramKind::Class => "Classes, their members and how they relate",
         DiagramKind::Erd => "Database entities, attributes and relationships",
+        DiagramKind::C4 => "Software architecture as systems, containers and components",
+    })
+}
+
+pub fn state_kind(kind: StateKind) -> String {
+    gettext(match kind {
+        StateKind::State => "State",
+        StateKind::Start => "Start",
+        StateKind::End => "End",
+        StateKind::Choice => "Choice",
+        StateKind::Fork => "Fork",
+        StateKind::Join => "Join",
+    })
+}
+
+pub fn usecase_element_kind(kind: UseCaseElementKind) -> String {
+    gettext(match kind {
+        UseCaseElementKind::Actor => "Actor",
+        UseCaseElementKind::UseCase => "Use Case",
+        UseCaseElementKind::UseCaseRect => "Use Case (Rectangle)",
+    })
+}
+
+pub fn usecase_relation_kind(kind: UseCaseRelationKind) -> String {
+    gettext(match kind {
+        UseCaseRelationKind::Arrow => "Association (Arrow)",
+        UseCaseRelationKind::Line => "Association",
+        UseCaseRelationKind::ArrowBack => "Association (Reverse Arrow)",
+        UseCaseRelationKind::CircleTo => "Association (Circle)",
+        UseCaseRelationKind::CircleFrom => "Association (Reverse Circle)",
+        UseCaseRelationKind::CrossTo => "Association (Cross)",
+        UseCaseRelationKind::CrossFrom => "Association (Reverse Cross)",
+        UseCaseRelationKind::Include => "Include",
+        UseCaseRelationKind::Extend => "Extend",
+        UseCaseRelationKind::Generalization => "Generalization",
+    })
+}
+
+/// Name of a mindmap node shape; `None` is plain text.
+pub fn mindmap_shape(shape: Option<MindmapShape>) -> String {
+    gettext(match shape {
+        None => "Text",
+        Some(MindmapShape::Square) => "Square",
+        Some(MindmapShape::Rounded) => "Rounded",
+        Some(MindmapShape::Circle) => "Circle",
+        Some(MindmapShape::Bang) => "Bang",
+        Some(MindmapShape::Cloud) => "Cloud",
+        Some(MindmapShape::Hexagon) => "Hexagon",
+    })
+}
+
+pub fn c4_level(level: Level) -> String {
+    gettext(match level {
+        Level::Context => "System Context",
+        Level::Container => "Container",
+        Level::Component => "Component",
+    })
+}
+
+pub fn c4_element_kind(kind: ElementKind) -> String {
+    gettext(match kind {
+        ElementKind::Person => "Person",
+        ElementKind::System => "Software System",
+        ElementKind::Container => "Container",
+        ElementKind::Component => "Component",
+    })
+}
+
+pub fn c4_element_shape(shape: ElementShape) -> String {
+    gettext(match shape {
+        ElementShape::Box => "Box",
+        ElementShape::Database => "Database",
+        ElementShape::Queue => "Queue",
+    })
+}
+
+pub fn c4_boundary_kind(kind: BoundaryKind) -> String {
+    gettext(match kind {
+        BoundaryKind::Generic => "Boundary",
+        BoundaryKind::Enterprise => "Enterprise",
+        BoundaryKind::System => "System",
+        BoundaryKind::Container => "Container",
     })
 }
 

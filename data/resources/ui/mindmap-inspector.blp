@@ -1,0 +1,68 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ReefgraphMindmapInspector: Adw.Bin {
+  child: Stack stack {
+    transition-type: crossfade;
+    vhomogeneous: false;
+
+    StackPage {
+      name: "diagram";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Mindmap");
+          description: _("Select a node and click the + below it to add a child. Drag from a node's handle onto another node to move it there. Double-click a node to edit its text. The layout follows the tree.");
+        }
+      };
+    }
+
+    StackPage {
+      name: "node";
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Node");
+
+          Adw.EntryRow node_text_row {
+            title: _("Text");
+            show-apply-button: true;
+          }
+
+          Adw.ComboRow node_shape_row {
+            title: _("Shape");
+          }
+
+          Adw.ActionRow {
+            title: _("Add Child");
+            activatable-widget: add_child_button;
+
+            [suffix]
+            Button add_child_button {
+              icon-name: "list-add-symbolic";
+              tooltip-text: _("Add Child");
+              valign: center;
+
+              styles [
+                "flat",
+              ]
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          Button delete_node_button {
+            label: _("Delete Node");
+            tooltip-text: _("Deletes the node and everything below it");
+            halign: center;
+
+            styles [
+              "destructive-action",
+              "pill",
+            ]
+          }
+        }
+      };
+    }
+  };
+}

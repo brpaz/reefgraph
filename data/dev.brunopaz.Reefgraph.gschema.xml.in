@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <schemalist>
-  <schema path="/dev/brunopaz/Merman/" id="@app-id@" gettext-domain="@gettext-package@">
+  <schema path="/dev/brunopaz/Reefgraph/" id="@app-id@" gettext-domain="@gettext-package@">
     <key name="window-width" type="i">
       <default>1280</default>
       <summary>Window width</summary>

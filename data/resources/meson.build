@@ -1,12 +1,16 @@
 blueprints = custom_target(
   'blueprints',
   input: files(
+    'ui/c4-inspector.blp',
     'ui/class-inspector.blp',
     'ui/erd-inspector.blp',
     'ui/flowchart-inspector.blp',
+    'ui/mindmap-inspector.blp',
     'ui/palette.blp',
     'ui/sequence-inspector.blp',
     'ui/shortcuts.blp',
+    'ui/state-inspector.blp',
+    'ui/usecase-inspector.blp',
     'ui/window.blp',
   ),
   output: '.',

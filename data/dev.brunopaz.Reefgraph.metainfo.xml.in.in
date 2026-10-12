@@ -3,10 +3,18 @@
   <id>@app-id@</id>
   <metadata_license>CC0</metadata_license>
   <project_license>MIT</project_license>
-  <name>Merman</name>
-  <summary>Visual WYSIWYG editor for Mermaid diagrams</summary>
+  <name>Reefgraph</name>
+  <summary>Draw Mermaid diagrams</summary>
   <description>
-    <p>Visual WYSIWYG editor for Mermaid diagrams</p>
+    <p>
+      Draw flowcharts, sequence, state, class, entity relationship, C4 and use case
+      diagrams and mindmaps by dragging shapes on a canvas, while Reefgraph keeps the
+      Mermaid source in sync next to it.
+    </p>
+    <p>
+      Files stay plain Mermaid, so they render anywhere Mermaid does. Diagrams inside
+      Markdown documents can be edited in place, and images can be exported as SVG or PNG.
+    </p>
   </description>
   <screenshots>
     <screenshot type="default">
@@ -15,15 +23,20 @@
       <caption>Main window</caption>
     </screenshot>
   </screenshots>
-  <url type="homepage">https://github.com/brpaz/merman</url>
-  <url type="bugtracker">https://github.com/brpaz/merman/issues</url>
-  <url type="vcs-browser">https://github.com/brpaz/merman</url>
+  <url type="homepage">https://github.com/brpaz/reefgraph</url>
+  <url type="bugtracker">https://github.com/brpaz/reefgraph/issues</url>
+  <url type="vcs-browser">https://github.com/brpaz/reefgraph</url>
+  <keywords>
+    <keyword>mermaid</keyword>
+    <keyword>diagram</keyword>
+    <keyword>flowchart</keyword>
+    <keyword>uml</keyword>
+  </keywords>
   <content_rating type="oars-1.1" />
   <releases>
     <release version="0.1.0" date="2019-07-11" />
   </releases>
-  <developer>
-    <id>bruno_paz</id>
+  <developer id="dev.brunopaz">
     <name translate="no">Bruno Paz</name>
   </developer>
   <!--

@@ -376,7 +376,7 @@ mod tests {
     #[test]
     fn keeps_header_direction_passthrough_and_positions() {
         let d = parse(
-            "classDiagram-v2\n direction RL\n note for A \"hi\"\n A --> B\n click A href \"x\"\n%% @merman pos A 1 2",
+            "classDiagram-v2\n direction RL\n note for A \"hi\"\n A --> B\n click A href \"x\"\n%% @reefgraph pos A 1 2",
         )
         .unwrap();
         assert!(d.v2);

@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn missing_layout_keeps_existing_positions() {
-        let mut chart = parse("flowchart TD\n A --> B\n%% @merman pos A 500 500").unwrap();
+        let mut chart = parse("flowchart TD\n A --> B\n%% @reefgraph pos A 500 500").unwrap();
         layout_missing(&mut chart, size);
         assert_eq!(pos(&chart, "A"), Point::new(500.0, 500.0));
         let b = pos(&chart, "B");
