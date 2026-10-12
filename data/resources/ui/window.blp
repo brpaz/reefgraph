@@ -203,7 +203,10 @@ template $MermanApplicationWindow: Adw.ApplicationWindow {
             end-child: Box {
               orientation: vertical;
 
-              Adw.Banner error_banner {}
+              Adw.Banner error_banner {
+                // Parse errors quote text from the opened file.
+                use-markup: false;
+              }
 
               ScrolledWindow source_scroller {
                 vexpand: true;

@@ -364,6 +364,8 @@ impl Inspector {
         for (index, attribute) in attributes.iter().enumerate() {
             let row = adw::EntryRow::builder()
                 .title(&attribute.name)
+                // Titles come from the opened file.
+                .use_markup(false)
                 .text(attribute.to_line())
                 .show_apply_button(true)
                 .build();
