@@ -21,6 +21,7 @@
 - Live two-way sync with the Mermaid source shown next to the canvas
 - All flowchart node shapes, solid/dotted/thick links, arrow/circle/cross heads, link labels
 - Automatic layered layout; manual positions are saved as Mermaid comments, so files stay valid Mermaid
+- Edit diagrams embedded in Markdown files: open a `.md` file, pick one of its `mermaid` code blocks and save it back in place
 - Copy the Mermaid source without editor metadata, ready to paste into Markdown
 - Export diagrams as SVG or PNG images
 - Undo/redo, zoom and pan, keyboard shortcuts

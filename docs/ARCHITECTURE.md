@@ -21,6 +21,7 @@ src/
 ├── drawing.rs           # Colors, label layout, text and Cairo helpers shared by the canvases
 ├── interaction.rs       # Navigable trait (scroll/zoom/pan), InlineEditor popover
 ├── export.rs            # SVG/PNG export: Exportable trait, Scene, render to a Cairo surface
+├── markdown.rs          # Mermaid fenced blocks in Markdown: find, extract, write back
 ├── box_canvas.rs        # MermanBoxCanvas: shared canvas for box-and-link diagrams (BoxDiagram trait)
 ├── palette.rs           # MermanPalette: tiles supplied by the active editor
 ├── combo.rs, labels.rs  # Combo row models and translatable enum names
@@ -114,7 +115,7 @@ Blocks (`loop`, `alt`, `opt`, `par`, `critical`, `break`, `rect`) are stored as 
 
 ## File Format
 
-Files are plain Mermaid. **Copy Mermaid Source** (Ctrl+Shift+C) copies the source without the `%% @merman pos <id> <x> <y>` lines (other comments and line endings are kept), for pasting where Mermaid is rendered.
+Files are plain Mermaid, or Markdown documents (`.md`, `.markdown`) with a diagram in a ```` ```mermaid ```` or `~~~mermaid` fenced block. Opening a Markdown file edits one block, chosen from a list when there are several; saving writes the document back with only that block's contents replaced. The fence's indentation is removed for editing and restored on save, so blocks nested in list items round-trip. Unclosed fences are ignored. When a line of the diagram would close the block early, both fences are lengthened; lines are written with the document's line ending. **Save As** to a Markdown file writes the whole document; to any other file it writes the diagram alone, and the document is no longer linked. **Copy Mermaid Source** (Ctrl+Shift+C) copies the source without the `%% @merman pos <id> <x> <y>` lines (other comments and line endings are kept), for pasting where Mermaid is rendered.
 
 - Flowcharts: manually placed nodes are stored as `%% @merman pos <id> <x> <y>` comments; see [ADR 0002](adr/0002-store-node-positions-in-mermaid-comments.md). `classDef`, `class`, `style`, `linkStyle`, `click` and comments are kept verbatim. `subgraph` is rejected with a parse error.
 - Entity relationship diagrams: manually placed entities use the same position comments as flowcharts. Relationships written with word aliases (`only one to zero or more`) are normalized to symbols when the canvas rewrites the source. `classDef`, `class`, `style` and comments are kept verbatim.

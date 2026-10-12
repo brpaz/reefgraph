@@ -14,6 +14,8 @@ use crate::diagram::{self, Diagram, DiagramKind};
 use crate::export::{self, ExportError, ImageFormat};
 use crate::flowchart::{self, NodeShape};
 use crate::interaction::Navigable;
+use crate::labels;
+use crate::markdown::{self, Embedding};
 use crate::new_diagram;
 use crate::palette::Palette;
 use crate::{
@@ -63,6 +65,9 @@ mod imp {
         pub settings: gio::Settings,
         pub kind: Cell<DiagramKind>,
         pub file: RefCell<Option<gio::File>>,
+        /// Set when `file` is a Markdown document and the source is one of
+        /// its Mermaid blocks.
+        pub embedding: RefCell<Option<Embedding>>,
         pub dirty: Cell<bool>,
         /// Set while the buffer is rewritten from the canvas, so the change is
         /// not parsed back into the canvas.
@@ -92,6 +97,7 @@ mod imp {
                 settings: gio::Settings::new(*APP_ID),
                 kind: Cell::new(DiagramKind::Flowchart),
                 file: RefCell::default(),
+                embedding: RefCell::default(),
                 dirty: Cell::new(false),
                 syncing: Cell::new(false),
                 pending_parse: RefCell::default(),
@@ -583,8 +589,14 @@ impl MermanApplicationWindow {
             None => imp.flowchart_canvas.load_chart(Default::default()),
         }
         imp.file.replace(file);
+        imp.embedding.replace(None);
         imp.dirty.set(false);
         self.update_title();
+    }
+
+    fn load_embedding(&self, embedding: Embedding, file: gio::File) {
+        self.load_text(&embedding.source(), Some(file));
+        self.imp().embedding.replace(Some(embedding));
     }
 
     pub async fn load_file(&self, file: &gio::File) {
@@ -595,10 +607,78 @@ impl MermanApplicationWindow {
                 None
             }
         };
-        match text {
-            Some(text) => self.load_text(&text, Some(file.clone())),
-            None => self.toast(&gettext("Could not open the file")),
+        let Some(text) = text else {
+            return self.toast(&gettext("Could not open the file"));
+        };
+        let is_markdown = file
+            .basename()
+            .is_some_and(|name| markdown::is_markdown_name(&name.to_string_lossy()));
+        if is_markdown {
+            self.open_markdown(text, file.clone()).await;
+        } else {
+            self.load_text(&text, Some(file.clone()));
         }
+    }
+
+    /// Opens a Mermaid block of a Markdown document, asking which one when
+    /// there are several.
+    async fn open_markdown(&self, text: String, file: gio::File) {
+        let mut blocks = markdown::mermaid_blocks(&text);
+        let index = match blocks.len() {
+            0 => return self.toast(&gettext("The file has no Mermaid diagrams")),
+            1 => 0,
+            _ => match self.choose_block(&text, &blocks).await {
+                Some(index) => index,
+                None => return,
+            },
+        };
+        let block = blocks.swap_remove(index);
+        self.load_embedding(Embedding::new(text, block), file);
+    }
+
+    async fn choose_block(&self, text: &str, blocks: &[markdown::MermaidBlock]) -> Option<usize> {
+        let list = gtk::ListBox::builder()
+            .selection_mode(gtk::SelectionMode::None)
+            .css_classes(["boxed-list"])
+            .build();
+        for block in blocks {
+            let source = block.source(text);
+            let title = match diagram::parse(&source) {
+                Ok(diagram) => labels::diagram_kind(diagram.kind()),
+                Err(_) => crate::syntax::split_source(&source)
+                    .map(|s| s.keyword().to_owned())
+                    .unwrap_or_default(),
+            };
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(&title))
+                .subtitle(gettext("Line {}").replace("{}", &block.line.to_string()))
+                .activatable(true)
+                .build();
+            row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+            list.append(&row);
+        }
+
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Choose a Diagram")),
+            Some(&gettext("The file has several Mermaid diagrams.")),
+        );
+        dialog.set_extra_child(Some(&list));
+        dialog.add_response("cancel", &gettext("_Cancel"));
+        dialog.set_close_response("cancel");
+
+        let chosen = std::rc::Rc::new(Cell::new(None));
+        list.connect_row_activated(glib::clone!(
+            #[weak]
+            dialog,
+            #[strong]
+            chosen,
+            move |_, row| {
+                chosen.set(usize::try_from(row.index()).ok());
+                dialog.close();
+            }
+        ));
+        dialog.choose_future(Some(self)).await;
+        chosen.get()
     }
 
     fn spawn_new_document(&self, kind: DiagramKind) {
@@ -644,12 +724,16 @@ impl MermanApplicationWindow {
             .and_then(|f| f.basename())
             .map(|p| p.display().to_string())
             .unwrap_or_else(|| format!("{}.mmd", gettext("diagram")));
+        let filters = file_filters();
         let dialog = gtk::FileDialog::builder()
             .title(gettext("Save Diagram"))
             .modal(true)
             .initial_name(initial_name)
-            .filters(&file_filters())
+            .filters(&filters)
             .build();
+        if self.imp().embedding.borrow().is_some() {
+            dialog.set_default_filter(filters.item(MARKDOWN_FILTER).and_downcast_ref());
+        }
         match dialog.save_future(Some(self)).await {
             Ok(file) => self.write_file(&file).await,
             Err(err) => {
@@ -659,8 +743,20 @@ impl MermanApplicationWindow {
         }
     }
 
+    /// Writes the source, or, to a Markdown file, the Markdown document with
+    /// the source in place of the block being edited. Saving to any other
+    /// file writes the source alone and leaves the Markdown document behind.
     async fn write_file(&self, file: &gio::File) -> bool {
-        let contents = self.source_text().into_bytes();
+        let imp = self.imp();
+        let source = self.source_text();
+        let to_markdown = file
+            .basename()
+            .is_some_and(|name| markdown::is_markdown_name(&name.to_string_lossy()));
+        let contents = match imp.embedding.borrow_mut().as_mut() {
+            Some(embedding) if to_markdown => embedding.replace(&source).to_owned(),
+            _ => source,
+        }
+        .into_bytes();
         let result = file
             .replace_contents_future(
                 contents,
@@ -671,8 +767,11 @@ impl MermanApplicationWindow {
             .await;
         match result {
             Ok(_) => {
-                self.imp().file.replace(Some(file.clone()));
-                self.imp().dirty.set(false);
+                if !to_markdown {
+                    imp.embedding.replace(None);
+                }
+                imp.file.replace(Some(file.clone()));
+                imp.dirty.set(false);
                 self.update_title();
                 true
             }
@@ -839,16 +938,24 @@ fn zoom_canvas(canvas: &impl Navigable, zoom_in: bool) {
     }
 }
 
+/// Position of the Markdown filter in `file_filters`.
+const MARKDOWN_FILTER: u32 = 1;
+
 fn file_filters() -> gio::ListStore {
     let mermaid = gtk::FileFilter::new();
     mermaid.set_name(Some(&gettext("Mermaid Diagrams")));
     mermaid.add_suffix("mmd");
     mermaid.add_suffix("mermaid");
+    let markdown = gtk::FileFilter::new();
+    markdown.set_name(Some(&gettext("Markdown Documents")));
+    markdown.add_suffix("md");
+    markdown.add_suffix("markdown");
     let all = gtk::FileFilter::new();
     all.set_name(Some(&gettext("All Files")));
     all.add_pattern("*");
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&mermaid);
+    filters.append(&markdown);
     filters.append(&all);
     filters
 }
