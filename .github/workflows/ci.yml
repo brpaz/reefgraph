@@ -100,7 +100,7 @@ jobs:
         shell: bash
         run: |
           version="${{ github.event.release.tag_name }}"
-          echo -n "${version}" > VERSION
+          echo -n "${version#v}" > VERSION
           python3 build-aux/add-release.py "${version}"
 
       - name: Build Flatpak
@@ -125,6 +125,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1.17.0
+
+      - name: Set version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: echo -n "${RELEASE_TAG#v}" > VERSION
 
       - name: Install build dependencies
         run: |
@@ -158,6 +163,11 @@ jobs:
     container: fedora:latest
     steps:
       - uses: actions/checkout@v6
+
+      - name: Set version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: echo -n "${RELEASE_TAG#v}" > VERSION
 
       - name: Install build dependencies
         run: |
