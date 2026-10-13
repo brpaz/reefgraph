@@ -2,8 +2,6 @@
 
 ## v0.1.1 - 2026-10-13
 
-### 0.1.1
-
 #### Bug Fixes
 
 - record releases in the Reefgraph metainfo by [@brpaz](https://github.com/brpaz) ([4e7c84c](https://github.com/brpaz/reefgraph/commit/4e7c84c66ef8f69201df993f87ef1d6fcc5bea2f))
