@@ -32,5 +32,5 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           branch: ${{ github.event.release.target_commitish }}
-          commit_message: "chore(release): [skip-ci] ${{ github.event.release.tag_name }}"
+          commit_message: "chore(release): [skip-ci] [skip changelog] ${{ github.event.release.tag_name }}"
           file_pattern: CHANGELOG.md VERSION data/dev.brunopaz.Reefgraph.metainfo.xml.in.in
