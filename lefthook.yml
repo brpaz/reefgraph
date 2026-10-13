@@ -18,6 +18,18 @@ pre-commit:
 pre-push:
   commands:
     commitlint:
+      # Lints the commits being pushed: those after the remote branch, or for
+      # a branch the remote doesn't have yet, after the point it left the
+      # remote's default branch (every commit when the remote is empty).
+      # Each message is linted on its own; merge commits are skipped.
       run: |
-        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        commitlint --from origin/$CURRENT_BRANCH --to HEAD
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        base=$(git rev-parse -q --verify "origin/$branch" \
+          || git merge-base HEAD origin/HEAD 2>/dev/null \
+          || git merge-base HEAD origin/main 2>/dev/null)
+        msg=$(mktemp)
+        trap 'rm -f "$msg"' EXIT
+        for commit in $(git rev-list --no-merges "${base:+$base..}HEAD"); do
+          git log -1 --format=%B "$commit" > "$msg"
+          commitlint --edit "$msg" || { echo "in commit $(git log -1 --format='%h %s' "$commit")"; exit 1; }
+        done
