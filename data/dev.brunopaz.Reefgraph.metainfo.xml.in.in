@@ -18,9 +18,16 @@
   </description>
   <screenshots>
     <screenshot type="default">
-      <!-- FIXME Replace this placeholder screenshot URL with a project screenshot. -->
-      <image>https://example.com/screenshot.png</image>
-      <caption>Main window</caption>
+      <image>https://raw.githubusercontent.com/brpaz/reefgraph/main/data/resources/screenshots/flowchart.png</image>
+      <caption>Editing a flowchart next to its Mermaid source</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/brpaz/reefgraph/main/data/resources/screenshots/class-diagram.png</image>
+      <caption>Class diagram</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/brpaz/reefgraph/main/data/resources/screenshots/mindmap.png</image>
+      <caption>Mindmap</caption>
     </screenshot>
   </screenshots>
   <url type="homepage">https://github.com/brpaz/reefgraph</url>
