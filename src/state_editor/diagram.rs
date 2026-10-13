@@ -181,6 +181,11 @@ impl BoxDiagram for StateDiagram {
         measure: Measure,
     ) -> Vec<Text> {
         let mut texts = Vec::new();
+        let boxes: Vec<Rect> = self
+            .states
+            .iter()
+            .filter_map(|s| self.rect_of(s, measure))
+            .collect();
         for (i, (t, path)) in self.transitions.iter().zip(paths).enumerate() {
             log_draw_error(render::draw_transition(
                 cr,
@@ -189,11 +194,12 @@ impl BoxDiagram for StateDiagram {
                 highlight.link == Some(i),
             ));
             if path.len() >= 2 && !t.label.is_empty() {
-                let at = routing::path_midpoint(path);
                 let (w, h) = measure(&t.label);
+                let size = (w + 8.0, h + 4.0);
+                let at = routing::label_position(path, size, &boxes);
                 log_draw_error(drawing::draw_label_background(
                     cr,
-                    &Rect::centered(at, (w + 8.0, h + 4.0)),
+                    &Rect::centered(at, size),
                     colors,
                 ));
                 texts.push(Text::plain(t.label.clone(), at, colors.fg));
@@ -216,5 +222,62 @@ impl BoxDiagram for StateDiagram {
             }
         }
         texts
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+    use crate::state::parse;
+
+    fn size(s: &str) -> (f64, f64) {
+        (s.chars().count() as f64 * 8.0, 16.0)
+    }
+
+    #[test]
+    fn transition_labels_stay_off_states() {
+        let mut d = parse(
+            "stateDiagram-v2
+    [*] --> Draft
+    Draft --> Review : submit
+    state check <<choice>>
+    Review --> check
+    check --> Draft : changes requested
+    check --> Approved : approved
+    Approved --> Published : publish",
+        )
+        .unwrap();
+        BoxDiagram::layout(&mut d, true, &size);
+        let boxes = d.boxes(&size);
+        let nodes: HashMap<&str, (Outline, Rect)> = boxes
+            .iter()
+            .map(|(id, rect)| (*id, (d.outline(id), *rect)))
+            .collect();
+        let links = d.links();
+        let edges: Vec<(&str, &str)> = links
+            .iter()
+            .map(|(a, b)| (a.as_str(), b.as_str()))
+            .collect();
+        let paths = routing::route_edges(&nodes, &edges);
+        let rects: Vec<Rect> = boxes.iter().map(|(_, r)| *r).collect();
+        for (t, path) in d.transitions.iter().zip(&paths) {
+            if t.label.is_empty() {
+                continue;
+            }
+            let (w, h) = size(&t.label);
+            let label = Rect::centered(
+                routing::label_position(path, (w + 8.0, h + 4.0), &rects),
+                (w + 8.0, h + 4.0),
+            );
+            for (id, r) in &boxes {
+                let overlaps = label.x < r.x + r.w
+                    && r.x < label.x + label.w
+                    && label.y < r.y + r.h
+                    && r.y < label.y + label.h;
+                assert!(!overlaps, "label {:?} covers state {id}", t.label);
+            }
+        }
     }
 }

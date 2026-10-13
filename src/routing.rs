@@ -220,6 +220,47 @@ pub fn path_midpoint(path: &[Point]) -> Point {
     }
 }
 
+/// Point at `t` (0 to 1) of the way along the path, by length.
+fn point_along(path: &[Point], t: f64) -> Option<Point> {
+    let lengths: Vec<f64> = path
+        .windows(2)
+        .map(|w| (w[1].x - w[0].x).hypot(w[1].y - w[0].y))
+        .collect();
+    let mut remaining = lengths.iter().sum::<f64>() * t;
+    for (w, len) in path.windows(2).zip(lengths) {
+        if remaining <= len && len > 0.0 {
+            let f = remaining / len;
+            return Some(Point::new(
+                w[0].x + (w[1].x - w[0].x) * f,
+                w[0].y + (w[1].y - w[0].y) * f,
+            ));
+        }
+        remaining -= len;
+    }
+    path.last().copied()
+}
+
+/// Where to center a label of `size` on `path`: its middle, or the point
+/// nearest to it along the path where the label covers none of `avoid`.
+/// Falls back to the middle when no such point exists.
+pub fn label_position(path: &[Point], size: (f64, f64), avoid: &[Rect]) -> Point {
+    let clear = |p: Point| {
+        let r = Rect::centered(p, size);
+        !avoid
+            .iter()
+            .any(|o| r.x < o.x + o.w && o.x < r.x + r.w && r.y < o.y + o.h && o.y < r.y + r.h)
+    };
+    let middle = path_midpoint(path);
+    if clear(middle) {
+        return middle;
+    }
+    (1..=9)
+        .flat_map(|i| [0.5 - 0.05 * i as f64, 0.5 + 0.05 * i as f64])
+        .filter_map(|t| point_along(path, t))
+        .find(|p| clear(*p))
+        .unwrap_or(middle)
+}
+
 pub fn distance_to_path(p: Point, path: &[Point]) -> f64 {
     path.windows(2)
         .map(|w| distance_to_segment(p, w[0], w[1]))
@@ -241,6 +282,21 @@ fn distance_to_segment(p: Point, a: Point, b: Point) -> f64 {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    #[test]
+    fn labels_slide_off_boxes_in_their_way() {
+        let path = [Point::new(0.0, 0.0), Point::new(200.0, 0.0)];
+        let size = (40.0, 16.0);
+        assert_eq!(label_position(&path, size, &[]), Point::new(100.0, 0.0));
+        let blocker = Rect::centered(Point::new(100.0, 0.0), (60.0, 30.0));
+        let at = label_position(&path, size, &[blocker]);
+        let label = Rect::centered(at, size);
+        assert!(label.x + label.w <= blocker.x || label.x >= blocker.x + blocker.w);
+        assert_eq!(at.y, 0.0);
+        // Nowhere clear: keep the middle.
+        let wall = Rect::centered(Point::new(100.0, 0.0), (400.0, 30.0));
+        assert_eq!(label_position(&path, size, &[wall]), Point::new(100.0, 0.0));
+    }
 
     fn close(a: Point, b: Point) -> bool {
         (a.x - b.x).abs() < 1e-9 && (a.y - b.y).abs() < 1e-9
