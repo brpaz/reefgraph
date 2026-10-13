@@ -175,6 +175,7 @@ impl BoxDiagram for Erd {
         colors: &Colors,
         measure: Measure,
     ) -> Vec<Text> {
+        let avoid: Vec<Rect> = self.boxes(measure).into_iter().map(|(_, r)| r).collect();
         let mut texts = Vec::new();
         for (i, (r, path)) in self.relationships.iter().zip(paths).enumerate() {
             log_draw_error(render::draw_relationship(
@@ -187,11 +188,12 @@ impl BoxDiagram for Erd {
                 highlight.link == Some(i),
             ));
             if !r.label.is_empty() && !path.is_empty() {
-                let at = routing::path_midpoint(path);
                 let (w, h) = measure(&r.label);
+                let size = (w + 8.0, h + 4.0);
+                let at = routing::label_position(path, size, &avoid);
                 log_draw_error(drawing::draw_label_background(
                     cr,
-                    &Rect::centered(at, (w + 8.0, h + 4.0)),
+                    &Rect::centered(at, size),
                     colors,
                 ));
                 texts.push(Text::plain(r.label.clone(), at, colors.fg));

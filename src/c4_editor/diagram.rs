@@ -194,6 +194,7 @@ impl BoxDiagram for C4Diagram {
         colors: &Colors,
         measure: Measure,
     ) -> Vec<Text> {
+        let avoid: Vec<Rect> = self.boxes(measure).into_iter().map(|(_, r)| r).collect();
         let mut texts = Vec::new();
         for frame in layout::frames(self, |e| element_rect(e, measure), measure) {
             log_draw_error(render::draw_frame(cr, &frame.rect, colors));
@@ -232,7 +233,7 @@ impl BoxDiagram for C4Diagram {
             let sizes: Vec<_> = lines.iter().map(|t| measure(t)).collect();
             let w = sizes.iter().map(|s| s.0).fold(0.0, f64::max);
             let h: f64 = sizes.iter().map(|s| s.1).sum();
-            let mid = routing::path_midpoint(path);
+            let mid = routing::label_position(path, (w + 8.0, h + 4.0), &avoid);
             log_draw_error(drawing::draw_label_background(
                 cr,
                 &Rect::centered(mid, (w + 8.0, h + 4.0)),

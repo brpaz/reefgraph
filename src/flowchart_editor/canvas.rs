@@ -821,22 +821,23 @@ impl Exportable for Canvas {
         };
 
         let paths = self.edge_paths(&chart);
+        let nodes: Vec<_> = chart
+            .nodes
+            .iter()
+            .filter_map(|node| Some((node, self.node_rect(node)?)))
+            .collect();
+        let node_rects: Vec<Rect> = nodes.iter().map(|(_, r)| *r).collect();
         let edge_labels: Vec<_> = chart
             .edges
             .iter()
             .zip(&paths)
             .filter(|(e, path)| !e.label.is_empty() && !path.is_empty())
             .map(|(e, path)| {
-                (
-                    drawing::label_layout(self, &e.label),
-                    routing::path_midpoint(path),
-                )
+                let layout = drawing::label_layout(self, &e.label);
+                let (w, h) = drawing::layout_size(&layout);
+                let at = routing::label_position(path, (w + 8.0, h + 4.0), &node_rects);
+                (layout, at)
             })
-            .collect();
-        let nodes: Vec<_> = chart
-            .nodes
-            .iter()
-            .filter_map(|node| Some((node, self.node_rect(node)?)))
             .collect();
         let connect_target = match drag {
             Drag::Connect { cursor, .. } => self.node_at(*cursor),
