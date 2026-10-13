@@ -5,35 +5,33 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/brpaz/reefgraph/ci.yml?branch=main&label=CI&logo=github&style=for-the-badge)](https://github.com/brpaz/reefgraph/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE.md)
 [![Flatpak](https://img.shields.io/badge/flatpak-ready-4A90D9?style=for-the-badge&logo=flatpak&logoColor=white)](https://flatpak.org)
+[![Vibe coded](https://img.shields.io/badge/vibe%20coded-Claude%20Opus%205.5-D97757?style=for-the-badge&logo=claude&logoColor=white)](#reefgraph)
+
+> [!WARNING]
+> **AI usage notice:** this project was fully vibe coded in a weekend with Claude Opus 5.5 to scratch a personal itch. The code has had little human review. Use it at your own risk, and keep backups of diagrams you care about.
 
 <div align="center">
 
-![Main window](data/resources/screenshots/screenshot1.png "Main window")
+![Flowchart in Reefgraph](data/resources/screenshots/flowchart.png "Flowchart")
 
 </div>
 
-## AI Usage notice
-
-This project was fully vibecoded in a Weekend using Claude Opus 5.5 to solve a personal itch. Use it at your own risk.
+<table>
+  <tr>
+    <td><img src="data/resources/screenshots/class-diagram.png" alt="Class diagram in Reefgraph"></td>
+    <td><img src="data/resources/screenshots/mindmap.png" alt="Mindmap in Reefgraph"></td>
+  </tr>
+</table>
 
 ## Features
 
-- Visual editing of Mermaid flowcharts: drag shapes from the palette, drag between nodes to link them, double-click to edit labels
-- Visual editing of sequence diagrams: participants and actors, messages drawn by dragging between lifelines, notes, activations, autonumbering and `loop`/`alt`/`opt`/`par`/`critical`/`break`/`rect` blocks; reorder participants and rows by dragging
-- Visual editing of state diagrams: states with descriptions, start and end states, choice, fork and join pseudo-states, and labelled transitions drawn by dragging between states
-- Visual editing of use case diagrams: actors, use cases, system boundaries drawn as frames, associations, include, extend and generalization
-- Visual editing of mindmaps: add children with one click, move branches by dragging between nodes, every Mermaid node shape, automatic two-sided layout
-- Visual editing of class diagrams: classes with stereotypes, generics and attribute/method compartments, UML relations (inheritance, composition, aggregation, association, dependency, realization, lollipop) with cardinalities
-- Visual editing of entity relationship diagrams: entities drawn as tables with typed attributes and PK/FK/UK keys, relationships with crow's-foot cardinalities created by dragging between entities
-- Visual editing of C4 context, container and component diagrams: people, systems, containers and components (also as databases, queues and external elements), relationships with technology, and nested boundaries drawn as frames around their members
-- Live two-way sync with the Mermaid source shown next to the canvas
-- All flowchart node shapes, solid/dotted/thick links, arrow/circle/cross heads, link labels
-- Automatic layered layout; manual positions are saved as Mermaid comments, so files stay valid Mermaid
-- Start a diagram from the clipboard: the New Diagram dialog previews every Mermaid diagram copied as plain text or inside Markdown
-- Edit diagrams embedded in Markdown files: open a `.md` file, pick one of its `mermaid` code blocks and save it back in place
-- Copy the Mermaid source without editor metadata, ready to paste into Markdown
-- Export diagrams as SVG or PNG images
-- Undo/redo, zoom and pan, keyboard shortcuts
+- Edit diagrams on a canvas: drag shapes from a palette, link them by dragging, edit text in place.
+- Diagram types: flowchart, sequence, state, class, entity relationship, C4, use case and mindmap.
+- The Mermaid source updates as you edit, and edits to the source update the canvas.
+- Files stay plain Mermaid; manual positions are stored as Mermaid comments.
+- Open and save Mermaid blocks inside Markdown files.
+- Start a diagram from Mermaid text on the clipboard.
+- Export as SVG or PNG.
 
 ## Install
 
