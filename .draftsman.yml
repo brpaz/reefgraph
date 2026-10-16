@@ -1,4 +1,42 @@
+# yaml-language-server: $schema=https://brpaz.github.io/draftsman/schema/config.schema.json
+#
+# Migrated from release-drafter's label-based categories (see .github/labels.yml,
+# .github/workflows/pr-label-checker.yml) to draftsman's Conventional-Commit-type
+# categories. Mapping applied — adjust if it doesn't match intent:
+#   feature, enhancement       -> feat        (Features)
+#   bug, fix, security         -> fix         (Bug Fixes)
+#   performance                -> perf        (Performance)
+#   docs                       -> docs        (Documentation)
+#   dependencies               -> build       (Dependencies)
+#   maintenance                -> chore       (Maintenance)
+#   breaking                   -> (none) draftsman detects breaking changes itself
+#                                  from a `!` after the type or a BREAKING CHANGE:
+#                                  footer, not from a label/category.
+#
+# Known gaps vs release-drafter with no draftsman equivalent: autolabeler (dropped —
+# draftsman doesn't label PRs), version-resolver (dropped — draftsman computes the
+# version bump itself from commit types), replacers (no regex-replace pass over the
+# rendered body), prerelease branches (not supported).
 
+mode: single
+
+tag-format: "v{{version}}"
+
+categories:
+  - type: feat
+    section: Features
+  - type: fix
+    section: Bug Fixes
+  - type: perf
+    section: Performance
+  - type: docs
+    section: Documentation
+  - type: build
+    section: Dependencies
+  - type: chore
+    section: Maintenance
+
+footer: true
 
 # The built-in template minus its `# <version>` title: the changelog workflow
 # adds its own `## v<version> - <date>` heading for each release.
