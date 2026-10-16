@@ -13,11 +13,12 @@ base_id = 'dev.brunopaz.Reefgraph'
 
 dependency('glib-2.0', version: '>= 2.66')
 dependency('gio-2.0', version: '>= 2.66')
-dependency('gtk4', version: '>= 4.14')
-dependency('libadwaita-1', version: '>= 1.5')
+dependency('gtk4', version: '>= 4.20')
+dependency('libadwaita-1', version: '>= 1.8')
 dependency('gtksourceview-5', version: '>= 5.10')
 
 find_program('glib-compile-resources')
+find_program('blueprint-compiler')
 glib_compile_schemas = find_program('glib-compile-schemas')
 desktop_file_validate = find_program('desktop-file-validate', required: false)
 appstreamcli = find_program('appstreamcli', required: false)
@@ -99,6 +100,21 @@ subdir('data')
 subdir('po')
 subdir('src')
 
+# Unit tests read the bundle from the build tree, not the install prefix.
+test_env = environment()
+test_env.set('CARGO_HOME', cargo_home)
+test_env.set('CARGO_TARGET_DIR', cargo_target)
+test_env.set('MESON_APP_ID', application_id)
+test_env.set('MESON_GETTEXT_PACKAGE', gettext_package)
+test_env.set('MESON_LOCALEDIR', localedir)
+test_env.set('MESON_PKGDATADIR', pkgdatadir)
+test_env.set('MESON_PROFILE', profile)
+test_env.set('MESON_VERSION', version + version_suffix)
+test_env.set(
+  'MESON_RESOURCES_FILE',
+  meson.project_build_root() / 'data' / 'resources' / 'resources.gresource',
+)
+
 test(
   'cargo-test',
   cargo,
@@ -109,7 +125,8 @@ test(
     '--all-features',
     '--workspace',
   ],
-  env: cargo_env,
+  env: test_env,
+  depends: resources,
   timeout: 400,
 )
 

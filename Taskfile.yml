@@ -62,6 +62,21 @@ tasks:
     cmds:
       - cargo clippy --all-targets --all-features --workspace -- -D warnings
 
+  deny:
+    desc: Check dependencies for advisories, licenses and banned sources
+    cmds:
+      - cargo deny check
+
+  secrets:
+    desc: Scan the repository history for leaked secrets
+    cmds:
+      - gitleaks git --redact --no-banner
+
+  blueprint:format:
+    desc: Format Blueprint files
+    cmds:
+      - blueprint-compiler format --fix data/resources/ui/*.blp
+
   pot:
     desc: Generate the POT translation template
     deps: [setup]
@@ -108,7 +123,7 @@ tasks:
     desc: Install Flatpak SDK/runtime dependencies for GNOME development
     deps: [flatpak:remote]
     cmds:
-      - flatpak install --user -y flathub org.gnome.Sdk//49 org.gnome.Platform//49 org.freedesktop.Sdk.Extension.rust-stable//25.08 org.freedesktop.Sdk.Extension.llvm20//25.08
+      - flatpak install --user -y flathub org.gnome.Sdk//51 org.gnome.Platform//51 org.freedesktop.Sdk.Extension.rust-stable//26.08 org.freedesktop.Sdk.Extension.llvm22//26.08
 
   flatpak:build:
     desc: Build the Flatpak bundle (development)

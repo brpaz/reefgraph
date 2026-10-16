@@ -15,6 +15,12 @@ pre-commit:
       stage_fixed: true
     test:
       run: cargo test --all
+    blueprint-format:
+      glob: "*.blp"
+      run: blueprint-compiler format --fix {staged_files}
+      stage_fixed: true
+    secrets:
+      run: gitleaks git --staged --redact --no-banner
 pre-push:
   commands:
     commitlint:

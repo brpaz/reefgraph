@@ -254,6 +254,14 @@ impl ReefgraphApplicationWindow {
         self.imp().buffer.set_style_scheme(scheme.as_ref());
     }
 
+    fn show_shortcuts(&self) {
+        let builder = gtk::Builder::from_resource("/dev/brunopaz/Reefgraph/ui/shortcuts.ui");
+        let dialog: adw::ShortcutsDialog = builder
+            .object("shortcuts_dialog")
+            .expect("shortcuts_dialog is defined in shortcuts.blp");
+        dialog.present(Some(self));
+    }
+
     fn setup_actions(&self) {
         let actions = [
             gio::ActionEntry::builder("new-diagram")
@@ -313,6 +321,9 @@ impl ReefgraphApplicationWindow {
                 .build(),
             gio::ActionEntry::builder("zoom-fit")
                 .activate(|win: &Self, _, _| win.fit_to_content())
+                .build(),
+            gio::ActionEntry::builder("show-help-overlay")
+                .activate(|win: &Self, _, _| win.show_shortcuts())
                 .build(),
         ];
         self.add_action_entries(actions);
