@@ -30,7 +30,8 @@ Contributions can take many forms, not just code. Here are some ways you can con
 This project uses the following technologies:
 
 - **Language**: [Rust](https://www.rust-lang.org/)
-- **GUI Framework**: [GTK4](https://gtk.org/)
+- **GUI Framework**: [GTK4](https://gtk.org/) with [libadwaita](https://gnome.pages.gitlab.gnome.org/libadwaita/) (1.8 or newer)
+- **UI Definitions**: [Blueprint](https://gnome.pages.gitlab.gnome.org/blueprint-compiler/)
 - **Build System**: [Meson](https://mesonbuild.com/) with [Ninja](https://ninja-build.org/)
 - **Development Environment**: [Devenv](https://devenv.sh/) (Nix-based)
 - **Task Runner**: [Task](https://taskfile.dev/) (aka go-task)
@@ -55,13 +56,13 @@ If you'd rather install dependencies directly, `devenv.nix` lists everything you
 
 ```bash
 # Fedora
-sudo dnf install meson ninja-build gcc gcc-c++ pkgconf-pkg-config gtk4-devel glib2-devel gettext desktop-file-utils appstream flatpak-builder
+sudo dnf install meson ninja-build gcc gcc-c++ pkgconf-pkg-config gtk4-devel libadwaita-devel gtksourceview5-devel blueprint-compiler glib2-devel gettext desktop-file-utils appstream flatpak-builder
 
 # Debian/Ubuntu
-sudo apt install meson ninja-build gcc g++ pkg-config libgtk-4-dev libglib2.0-dev gettext desktop-file-utils appstream flatpak-builder
+sudo apt install meson ninja-build gcc g++ pkg-config libgtk-4-dev libadwaita-1-dev libgtksourceview-5-dev blueprint-compiler libglib2.0-dev gettext desktop-file-utils appstream flatpak-builder
 
 # Arch
-sudo pacman -S meson ninja gcc pkgconf gtk4 glib2 gettext desktop-file-utils appstream flatpak-builder
+sudo pacman -S meson ninja gcc pkgconf gtk4 libadwaita gtksourceview5 blueprint-compiler glib2 gettext desktop-file-utils appstream flatpak-builder
 ```
 
 Plus [Task](https://taskfile.dev/), [Lefthook](https://lefthook.dev/), [commitlint-rs](https://github.com/KeisukeYamashita/commitlint-rs) (`cargo install commitlint-rs`) for the workflow described below, and [nfpm](https://nfpm.goreleaser.com/) if you want to build `.deb`/`.rpm` packages locally (see [Building Native Packages](#building-native-packages)).
@@ -176,7 +177,7 @@ task flatpak:run
 
 ### Building Native Packages
 
-Besides the Flatpak, the CI also builds `.deb` and `.rpm` packages with [nfpm](https://nfpm.goreleaser.com/) (config in `nfpm.yaml`) from a `DESTDIR`-staged Meson install — no bundled dependencies, unlike the Flatpak; the package declares GTK4/GLib as regular system dependencies. To build one locally (requires `nfpm` on `$PATH`):
+Besides the Flatpak, the CI also builds `.deb` and `.rpm` packages with [nfpm](https://nfpm.goreleaser.com/) (config in `nfpm.yaml`) from a `DESTDIR`-staged Meson install — no bundled dependencies, unlike the Flatpak; the package declares GTK4/libadwaita/GLib as regular system dependencies. To build one locally (requires `nfpm` on `$PATH`):
 
 ```bash
 task package:deb   # or package:rpm
@@ -195,6 +196,9 @@ This project uses [Task](https://taskfile.dev/) for common development tasks. Ru
 | `task test:cargo` | Run Cargo tests directly |
 | `task clippy` | Run Clippy lints |
 | `task fmt:check` | Check code formatting |
+| `task blueprint:format` | Format Blueprint UI files |
+| `task deny` | Check dependencies for advisories, licenses and sources (cargo-deny) |
+| `task secrets` | Scan the repository for leaked secrets (gitleaks) |
 | `task clean` | Remove build artifacts |
 | `task flatpak:build` | Build a Flatpak |
 | `task flatpak:install` | Install Flatpak locally |

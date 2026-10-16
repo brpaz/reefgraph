@@ -1,12 +1,12 @@
 {
     "id": "dev.brunopaz.Reefgraph.Devel",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "49",
+    "runtime-version": "51",
     "sdk": "org.gnome.Sdk",
     "command": "reefgraph",
     "sdk-extensions": [
         "org.freedesktop.Sdk.Extension.rust-stable",
-        "org.freedesktop.Sdk.Extension.llvm20"
+        "org.freedesktop.Sdk.Extension.llvm22"
     ],
     "finish-args": [
         "--share=ipc",
@@ -19,7 +19,7 @@
     ],
     "command": "reefgraph",
     "build-options": {
-        "append-path": "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm20/bin",
+        "append-path": "/usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm22/bin",
         "build-args": ["--share=network"],
         "env": {
             "CARGO_REGISTRIES_CRATES_IO_PROTOCOL": "sparse",
@@ -31,6 +31,18 @@
         "test-args": ["--socket=x11", "--share=network"]
     },
     "modules": [
+        {
+            "name": "blueprint-compiler",
+            "buildsystem": "meson",
+            "cleanup": ["*"],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/blueprint-compiler",
+                    "tag": "v0.22.2"
+                }
+            ]
+        },
         {
             "name": "reefgraph",
             "buildsystem": "meson",

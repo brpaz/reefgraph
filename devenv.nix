@@ -18,6 +18,8 @@
     libadwaita
     gtksourceview5
     blueprint-compiler
+    cargo-deny
+    gitleaks
     desktop-file-utils
     appstream
     pkg-config

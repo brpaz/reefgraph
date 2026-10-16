@@ -107,6 +107,7 @@ impl ReefgraphApplication {
     fn setup_accels(&self) {
         self.set_accels_for_action("app.quit", &["<Control>q"]);
         self.set_accels_for_action("window.close", &["<Control>w"]);
+        self.set_accels_for_action("win.show-help-overlay", &["<Control>question"]);
         self.set_accels_for_action("win.new-diagram", &["<Control>n"]);
         self.set_accels_for_action("win.open", &["<Control>o"]);
         self.set_accels_for_action("win.save", &["<Control>s"]);

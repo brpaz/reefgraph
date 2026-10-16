@@ -1,5 +1,8 @@
 /target/
 /_build/
+/_install/
+*.deb
+*.rpm
 /build/
 /builddir/
 /build-aux/app
