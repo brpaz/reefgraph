@@ -96,6 +96,8 @@ jobs:
     needs: [lint, test]
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -119,6 +121,10 @@ jobs:
           run-tests: false
           cache-key: flatpak-builder-${{ github.sha }}
 
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: ${{ steps.version.outputs.bundle }}
+
       - name: Upload Flatpak artifact to release
         uses: softprops/action-gh-release@v3.0.3
         with:
@@ -130,6 +136,10 @@ jobs:
     if: github.event_name == 'release'
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     # libadwaita >= 1.8 is not packaged on ubuntu-latest
     container: debian:unstable
     steps:
@@ -159,6 +169,10 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager deb --target .
 
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: "*.deb"
+
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: reefgraph-deb
@@ -169,6 +183,10 @@ jobs:
     if: github.event_name == 'release'
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     container: fedora:latest
     steps:
       - name: Install build dependencies
@@ -195,6 +213,10 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager rpm --target .
+
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: "*.rpm"
 
       - uses: actions/upload-artifact@v7.0.2
         with:
@@ -225,15 +247,13 @@ jobs:
             *.rpm
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  release-integrity:
-    name: Checksums and attestations
+  release-checksums:
+    name: Publish SHA256SUMS
     needs: [native-packages-release, flatpak-release]
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write
-      attestations: write
     steps:
       - name: Download release assets
         env:
@@ -243,13 +263,6 @@ jobs:
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern '*.deb' --pattern '*.rpm' --pattern '*.flatpak'
           sha256sum *.deb *.rpm *.flatpak > SHA256SUMS
-
-      - uses: actions/attest-build-provenance@v4.2.2
-        with:
-          subject-path: |
-            *.deb
-            *.rpm
-            *.flatpak
 
       - name: Upload checksums to the release
         uses: softprops/action-gh-release@v3.0.3
