@@ -144,8 +144,7 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: echo -n "${RELEASE_TAG#v}" > VERSION
 
-      - name: Install nfpm
-        run: curl -sSL https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin nfpm
+      - uses: ./.github/actions/install-nfpm
 
       - name: Build and install into a staging root
         run: |
@@ -170,24 +169,19 @@ jobs:
     runs-on: ubuntu-latest
     container: fedora:latest
     steps:
-      - uses: actions/checkout@v7.0.1
-
       - name: Install build dependencies
         run: |
           dnf install -y meson ninja-build gcc gcc-c++ pkgconf-pkg-config gtk4-devel libadwaita-devel gtksourceview5-devel blueprint-compiler glib2-devel gettext desktop-file-utils appstream curl
 
-      - name: Install Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
 
       - name: Set version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: echo -n "${RELEASE_TAG#v}" > VERSION
 
-      - name: Install nfpm
-        run: curl -sSL https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin nfpm
+      - uses: ./.github/actions/install-nfpm
 
       - name: Build and install into a staging root
         run: |
