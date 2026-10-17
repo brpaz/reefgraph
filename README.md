@@ -39,14 +39,14 @@ Download the package for your system from the [latest release](https://github.co
 
 ```bash
 # Flatpak
-flatpak install --user dev.brunopaz.Reefgraph.flatpak
+flatpak install --user ./dev.brunopaz.Reefgraph-*-x86_64.flatpak
 flatpak run dev.brunopaz.Reefgraph
 
 # Debian/Ubuntu
-sudo apt install ./reefgraph.deb
+sudo apt install ./reefgraph_*_amd64.deb
 
 # Fedora
-sudo dnf install ./reefgraph.rpm
+sudo dnf install ./reefgraph-*.x86_64.rpm
 ```
 
 ## Build from Source
