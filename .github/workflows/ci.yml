@@ -142,7 +142,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
       attestations: write
     # libadwaita >= 1.8 is not packaged on ubuntu-latest
@@ -181,12 +181,13 @@ jobs:
         with:
           subject-path: "*.deb"
 
-      - uses: actions/upload-artifact@v7.0.2
+      - name: Upload package to the release
+        uses: softprops/action-gh-release@v3.0.3
         with:
-          name: reefgraph-deb
-          path: |
+          files: |
             *.deb
             *.deb.sha256
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-rpm:
     name: Build .rpm package
@@ -194,7 +195,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
       attestations: write
     container: fedora:latest
@@ -231,35 +232,10 @@ jobs:
         with:
           subject-path: "*.rpm"
 
-      - uses: actions/upload-artifact@v7.0.2
-        with:
-          name: reefgraph-rpm
-          path: |
-            *.rpm
-            *.rpm.sha256
-
-  native-packages-release:
-    name: Attach .deb/.rpm packages to release
-    needs: [build-deb, build-rpm]
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v8.0.2
-        with:
-          name: reefgraph-deb
-
-      - uses: actions/download-artifact@v8.0.2
-        with:
-          name: reefgraph-rpm
-
-      - name: Upload packages to the release
+      - name: Upload package to the release
         uses: softprops/action-gh-release@v3.0.3
         with:
           files: |
-            *.deb
-            *.deb.sha256
             *.rpm
             *.rpm.sha256
           token: ${{ secrets.GITHUB_TOKEN }}
