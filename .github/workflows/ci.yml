@@ -144,7 +144,7 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: echo -n "${RELEASE_TAG#v}" > VERSION
 
-      - uses: ./.github/actions/install-nfpm
+      - uses: ./.github/actions/setup-nfpm
 
       - name: Build and install into a staging root
         run: |
@@ -181,7 +181,7 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: echo -n "${RELEASE_TAG#v}" > VERSION
 
-      - uses: ./.github/actions/install-nfpm
+      - uses: ./.github/actions/setup-nfpm
 
       - name: Build and install into a staging root
         run: |

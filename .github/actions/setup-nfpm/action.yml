@@ -1,4 +1,4 @@
-name: Install nfpm
+name: Setup nfpm
 description: Download the nfpm release binary into /usr/local/bin.
 
 inputs:
