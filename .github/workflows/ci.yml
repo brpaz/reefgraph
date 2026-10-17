@@ -224,3 +224,35 @@ jobs:
             *.deb
             *.rpm
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  release-integrity:
+    name: Checksums and attestations
+    needs: [native-packages-release, flatpak-release]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.deb' --pattern '*.rpm' --pattern '*.flatpak'
+          sha256sum *.deb *.rpm *.flatpak > SHA256SUMS
+
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: |
+            *.deb
+            *.rpm
+            *.flatpak
+
+      - name: Upload checksums to the release
+        uses: softprops/action-gh-release@v3.0.3
+        with:
+          files: SHA256SUMS
+          token: ${{ secrets.GITHUB_TOKEN }}
