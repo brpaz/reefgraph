@@ -1,0 +1,19 @@
+name: Setup nfpm
+description: Download the nfpm release binary into /usr/local/bin.
+
+inputs:
+  version:
+    description: nfpm version, without the leading "v".
+    required: false
+    default: "2.48.0"
+
+runs:
+  using: composite
+  steps:
+    - name: Install nfpm
+      shell: bash
+      env:
+        NFPM_VERSION: ${{ inputs.version }}
+      run: |
+        curl -sSfL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" \
+          | tar -xz -C /usr/local/bin nfpm

@@ -1,47 +1,15 @@
-mod application;
-mod box_canvas;
-mod c4;
-mod c4_editor;
-mod class_diagram;
-mod class_editor;
-mod combo;
-mod config;
-mod diagram;
-mod drawing;
-mod erd;
-mod erd_editor;
-mod export;
-mod flowchart;
-mod flowchart_editor;
-mod geometry;
-mod history;
-mod ids;
-mod interaction;
-mod labels;
-mod layered;
-mod markdown;
-mod mindmap;
-mod mindmap_editor;
-mod new_diagram;
-mod palette;
-mod routing;
-mod sequence;
-mod sequence_editor;
-mod state;
-mod state_editor;
-mod syntax;
-mod usecase;
-mod usecase_editor;
-mod viewport;
-mod window;
+mod app;
+mod canvas;
+mod diagrams;
+mod shared;
 
 use std::path::PathBuf;
 
 use gettextrs::{LocaleCategory, gettext};
 use gtk::{gio, glib};
 
-use self::application::ReefgraphApplication;
-use self::config::{GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE};
+use self::app::application::ReefgraphApplication;
+use self::app::config::{GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE};
 
 fn main() -> glib::ExitCode {
     // Initialize logger

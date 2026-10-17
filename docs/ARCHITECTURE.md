@@ -7,47 +7,61 @@ Reefgraph is a GTK4/libadwaita application written in Rust for editing Mermaid f
 ```
 src/
 ├── main.rs              # i18n, resource loading, application start
-├── application.rs       # AdwApplication: actions, accelerators, about dialog, file open from CLI
-├── window.rs            # Main window: picks the editor for the diagram type, source <-> canvas sync, file I/O
-├── diagram.rs           # Diagram type detection and parse dispatch; DiagramKind templates and samples
-├── new_diagram.rs       # New Diagram dialog: one tile per DiagramKind with a rendered sample preview
-├── syntax.rs            # Shared parsing: ParseError, front matter/declaration split, `;` statements
-├── ids.rs               # Element id rules shared by the models
-├── geometry.rs          # Point, Rect
-├── viewport.rs          # Pan/zoom mapping between canvas and widget coordinates
-├── history.rs           # Snapshot undo/redo stack
-├── layered.rs           # Layered auto layout and flow Direction, for node-link diagrams
-├── routing.rs           # Edge paths: outline clipping, parallel bends, detours around nodes
-├── drawing.rs           # Colors, label layout, text and Cairo helpers shared by the canvases
-├── interaction.rs       # Navigable trait (scroll/zoom/pan), InlineEditor popover
-├── export.rs            # SVG/PNG export: Exportable trait, Scene, render to a Cairo surface
-├── markdown.rs          # Mermaid fenced blocks in Markdown: find, extract, write back
-├── box_canvas.rs        # ReefgraphBoxCanvas: shared canvas for box-and-link diagrams (BoxDiagram trait)
-├── palette.rs           # ReefgraphPalette: tiles supplied by the active editor
-├── combo.rs, labels.rs  # Combo row models and translatable enum names
-├── flowchart/           # Flowchart domain (no GTK): model, parser, serializer, layered layout
-├── flowchart_editor/    # ReefgraphFlowchartCanvas, ReefgraphFlowchartInspector, shape geometry and rendering
-├── sequence/            # Sequence domain (no GTK): model, parser, serializer, layout and hit testing
-├── sequence_editor/     # ReefgraphSequenceCanvas, ReefgraphSequenceInspector, rendering
-├── state/               # State diagram domain (no GTK): model, parser, serializer, state geometry, layout
-├── state_editor/        # BoxDiagram for state diagrams, ReefgraphStateInspector, state shapes
-├── usecase/             # Use case domain (no GTK): model, parser, serializer, element geometry, boundary frames, compound layout
-├── usecase_editor/      # BoxDiagram for use case diagrams, ReefgraphUseCaseInspector, actor and relationship drawing
-├── mindmap/             # Mindmap domain (no GTK): tree model, indentation parser, serializer, two-sided tree layout
-├── mindmap_editor/      # BoxDiagram for mindmaps, ReefgraphMindmapInspector, node shapes and branches
-├── class_diagram/       # Class diagram domain (no GTK): model, parser, serializer, class box geometry, layout
-├── class_editor/        # BoxDiagram for class diagrams, ReefgraphClassInspector, UML relation heads
-├── erd/                 # ERD domain (no GTK): model, parser, serializer, entity box geometry, layout
-├── erd_editor/          # BoxDiagram for ERDs, ReefgraphErdInspector, crow's-foot rendering
-├── c4/                  # C4 domain (no GTK): model, parser, serializer, element boxes, boundary frames, compound layout
-└── c4_editor/           # BoxDiagram for C4 diagrams, ReefgraphC4Inspector, element shapes and frames
+├── app/                 # Application shell
+│   ├── application.rs   # AdwApplication: actions, accelerators, about dialog, file open from CLI
+│   ├── window.rs        # Main window: picks the editor for the diagram type, source <-> canvas sync, file I/O
+│   ├── new_diagram.rs   # New Diagram dialog: one tile per DiagramKind with a rendered sample preview
+│   ├── palette.rs       # ReefgraphPalette: tiles supplied by the active editor
+│   ├── export.rs        # SVG/PNG export: Exportable trait, Scene, render to a Cairo surface
+│   └── config.rs        # Build-time constants
+├── shared/              # GTK-free helpers used by the domains and editors
+│   ├── syntax.rs        # ParseError, front matter/declaration split, `;` statements
+│   ├── ids.rs           # Element id rules shared by the models
+│   ├── geometry.rs      # Point, Rect
+│   ├── history.rs       # Snapshot undo/redo stack
+│   ├── layered.rs       # Layered auto layout and flow Direction, for node-link diagrams
+│   ├── routing.rs       # Edge paths: outline clipping, parallel bends, detours around nodes
+│   ├── markdown.rs      # Mermaid fenced blocks in Markdown: find, extract, write back
+│   └── labels.rs        # Translatable enum names
+├── canvas/              # Widgets and drawing shared by the editors
+│   ├── box_canvas.rs    # ReefgraphBoxCanvas: shared canvas for box-and-link diagrams (BoxDiagram trait)
+│   ├── drawing.rs       # Colors, label layout, text and Cairo helpers shared by the canvases
+│   ├── viewport.rs      # Pan/zoom mapping between canvas and widget coordinates
+│   ├── interaction.rs   # Navigable trait (scroll/zoom/pan), InlineEditor popover
+│   └── combo.rs         # Combo row models
+├── diagrams/
+│   ├── mod.rs           # Diagram type detection and parse dispatch; DiagramKind templates and samples
+│   ├── flowchart/
+│   │   ├── …               # Flowchart domain (no GTK): model, parser, serializer, layered layout
+│   │   └── editor/         # ReefgraphFlowchartCanvas, ReefgraphFlowchartInspector, shape geometry and rendering
+│   ├── sequence/
+│   │   ├── …               # Sequence domain (no GTK): model, parser, serializer, layout and hit testing
+│   │   └── editor/         # ReefgraphSequenceCanvas, ReefgraphSequenceInspector, rendering
+│   ├── state/
+│   │   ├── …               # State diagram domain (no GTK): model, parser, serializer, state geometry, layout
+│   │   └── editor/         # BoxDiagram for state diagrams, ReefgraphStateInspector, state shapes
+│   ├── usecase/
+│   │   ├── …               # Use case domain (no GTK): model, parser, serializer, element geometry, boundary frames, compound layout
+│   │   └── editor/         # BoxDiagram for use case diagrams, ReefgraphUseCaseInspector, actor and relationship drawing
+│   ├── mindmap/
+│   │   ├── …               # Mindmap domain (no GTK): tree model, indentation parser, serializer, two-sided tree layout
+│   │   └── editor/         # BoxDiagram for mindmaps, ReefgraphMindmapInspector, node shapes and branches
+│   ├── class/
+│   │   ├── …               # Class diagram domain (no GTK): model, parser, serializer, class box geometry, layout
+│   │   └── editor/         # BoxDiagram for class diagrams, ReefgraphClassInspector, UML relation heads
+│   ├── erd/
+│   │   ├── …               # ERD domain (no GTK): model, parser, serializer, entity box geometry, layout
+│   │   └── editor/         # BoxDiagram for ERDs, ReefgraphErdInspector, crow's-foot rendering
+│   └── c4/
+│       ├── …               # C4 domain (no GTK): model, parser, serializer, element boxes, boundary frames, compound layout
+│       └── editor/         # BoxDiagram for C4 diagrams, ReefgraphC4Inspector, element shapes and frames
 
 data/resources/ui/*.blp  # Blueprint templates for window, palette, inspectors, shortcuts
 ```
 
-New documents are created from the **New Diagram** dialog (Ctrl+N or the "+" header button). Its **From Clipboard** section reads the clipboard text when the dialog opens and offers a tile for every diagram in it that parses: the whole text, or each `mermaid` block when it is Markdown (`markdown::pasted_diagrams`). Invalid text yields no tile, so the current document is never replaced by a broken one. Below it, **Empty Diagram** lists `DiagramKind::ALL`; each tile shows the kind's sample diagram rendered with the export code, a name and a description from `labels.rs`. The dialog hands the window the chosen source text, which it loads as an untitled document. Adding a diagram type to the dialog takes a `DiagramKind` variant with a template and sample, its labels, and an arm in `Diagram::for_canvas`, which routes a parsed diagram to the flowchart, sequence or box canvas for previews and editing.
+New documents are created from the **New Diagram** dialog (Ctrl+N or the "+" header button). Its **From Clipboard** section reads the clipboard text when the dialog opens and offers a tile for every diagram in it that parses: the whole text, or each `mermaid` block when it is Markdown (`shared::markdown::pasted_diagrams`). Invalid text yields no tile, so the current document is never replaced by a broken one. Below it, **Empty Diagram** lists `DiagramKind::ALL`; each tile shows the kind's sample diagram rendered with the export code, a name and a description from `shared/labels.rs`. The dialog hands the window the chosen source text, which it loads as an untitled document. Adding a diagram type to the dialog takes a `DiagramKind` variant with a template and sample, its labels, and an arm in `Diagram::for_canvas`, which routes a parsed diagram to the flowchart, sequence or box canvas for previews and editing.
 
-Each diagram type is a pair of modules: a GTK-free domain module covered by plain `cargo test`, and an editor module with its properties panel. Editor modules depend on the domain and the shared modules, never on each other.
+Each diagram type is a folder under `diagrams/`: GTK-free domain files covered by plain `cargo test`, and an `editor/` submodule with the canvas integration and properties panel. Editors depend on their own domain and the shared modules, never on another diagram type's editor.
 
 Flowcharts and sequence diagrams have their own canvas widgets. State, use case, class, entity relationship and C4 diagrams and mindmaps share `ReefgraphBoxCanvas`, which implements moving, linking, the add-row button, in-place editing, undo and navigation once; each diagram type implements the `BoxDiagram` trait (geometry, rendering, what rows are and how edited text applies). Inspectors reach the typed model through `BoxCanvas::with::<M>` and `BoxCanvas::edit::<M>`; see [ADR 0003](adr/0003-shared-box-canvas.md).
 

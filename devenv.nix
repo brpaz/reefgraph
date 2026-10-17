@@ -1,9 +1,6 @@
 { pkgs, ... }:
 
 {
-  # https://devenv.sh/basics/
-  dotenv.enable = true;
-
   # https://devenv.sh/packages/
   packages = with pkgs; [
     commitlint-rs
@@ -45,10 +42,6 @@
 
   # https://devenv.sh/basics/
   enterShell = ''
-    if [ ! -f .env ]; then
-      cp .env.example .env
-    fi
-
     lefthook install
   '';
 

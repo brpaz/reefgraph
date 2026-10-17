@@ -96,6 +96,8 @@ jobs:
     needs: [lint, test]
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
@@ -103,24 +105,35 @@ jobs:
       - uses: actions/checkout@v7.0.1
 
       - name: Set version
+        id: version
         shell: bash
         run: |
           version="${{ github.event.release.tag_name }}"
           echo -n "${version#v}" > VERSION
+          echo "bundle=dev.brunopaz.Reefgraph-${version#v}-x86_64.flatpak" >> "$GITHUB_OUTPUT"
           python3 build-aux/add-release.py "${version}"
 
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6.8
         with:
-          bundle: dev.brunopaz.Reefgraph.flatpak
+          bundle: ${{ steps.version.outputs.bundle }}
           manifest-path: build-aux/dev.brunopaz.Reefgraph.json
           run-tests: false
           cache-key: flatpak-builder-${{ github.sha }}
 
+      - name: Write checksum
+        run: sha256sum "${{ steps.version.outputs.bundle }}" > "${{ steps.version.outputs.bundle }}.sha256"
+
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: ${{ steps.version.outputs.bundle }}
+
       - name: Upload Flatpak artifact to release
         uses: softprops/action-gh-release@v3.0.3
         with:
-          files: dev.brunopaz.Reefgraph.flatpak
+          files: |
+            ${{ steps.version.outputs.bundle }}
+            ${{ steps.version.outputs.bundle }}.sha256
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-deb:
@@ -128,6 +141,10 @@ jobs:
     if: github.event_name == 'release'
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     # libadwaita >= 1.8 is not packaged on ubuntu-latest
     container: debian:unstable
     steps:
@@ -144,8 +161,7 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: echo -n "${RELEASE_TAG#v}" > VERSION
 
-      - name: Install nfpm
-        run: curl -sSL https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin nfpm
+      - uses: ./.github/actions/setup-nfpm
 
       - name: Build and install into a staging root
         run: |
@@ -156,38 +172,46 @@ jobs:
       - name: Package .deb
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager deb --target reefgraph.deb
+        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager deb --target .
+
+      - name: Write checksum
+        run: sha256sum *.deb > "$(echo *.deb).sha256"
+
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: "*.deb"
 
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: reefgraph-deb
-          path: reefgraph.deb
+          path: |
+            *.deb
+            *.deb.sha256
 
   build-rpm:
     name: Build .rpm package
     if: github.event_name == 'release'
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     container: fedora:latest
     steps:
-      - uses: actions/checkout@v7.0.1
-
       - name: Install build dependencies
         run: |
           dnf install -y meson ninja-build gcc gcc-c++ pkgconf-pkg-config gtk4-devel libadwaita-devel gtksourceview5-devel blueprint-compiler glib2-devel gettext desktop-file-utils appstream curl
 
-      - name: Install Rust
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none --profile minimal
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2.0.0
 
       - name: Set version
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: echo -n "${RELEASE_TAG#v}" > VERSION
 
-      - name: Install nfpm
-        run: curl -sSL https://github.com/goreleaser/nfpm/releases/download/v2.48.0/nfpm_2.48.0_Linux_x86_64.tar.gz | tar -xz -C /usr/local/bin nfpm
+      - uses: ./.github/actions/setup-nfpm
 
       - name: Build and install into a staging root
         run: |
@@ -198,12 +222,21 @@ jobs:
       - name: Package .rpm
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager rpm --target reefgraph.rpm
+        run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager rpm --target .
+
+      - name: Write checksum
+        run: sha256sum *.rpm > "$(echo *.rpm).sha256"
+
+      - uses: actions/attest-build-provenance@v4.2.2
+        with:
+          subject-path: "*.rpm"
 
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: reefgraph-rpm
-          path: reefgraph.rpm
+          path: |
+            *.rpm
+            *.rpm.sha256
 
   native-packages-release:
     name: Attach .deb/.rpm packages to release
@@ -225,6 +258,8 @@ jobs:
         uses: softprops/action-gh-release@v3.0.3
         with:
           files: |
-            reefgraph.deb
-            reefgraph.rpm
+            *.deb
+            *.deb.sha256
+            *.rpm
+            *.rpm.sha256
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -177,7 +177,7 @@ tasks:
       - meson compile -C {{.BUILD_DIR}}
       - rm -rf {{.INSTALL_DIR}}
       - DESTDIR=$PWD/{{.INSTALL_DIR}} meson install -C {{.BUILD_DIR}}
-      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager deb --target reefgraph.deb
+      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager deb --target .
 
   package:rpm:
     desc: Build and package a .rpm from a release build (requires nfpm on $PATH)
@@ -186,4 +186,4 @@ tasks:
       - meson compile -C {{.BUILD_DIR}}
       - rm -rf {{.INSTALL_DIR}}
       - DESTDIR=$PWD/{{.INSTALL_DIR}} meson install -C {{.BUILD_DIR}}
-      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager rpm --target reefgraph.rpm
+      - VERSION=$(cat VERSION) nfpm package --config nfpm.yaml --packager rpm --target .
