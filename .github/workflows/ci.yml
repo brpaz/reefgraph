@@ -121,6 +121,9 @@ jobs:
           run-tests: false
           cache-key: flatpak-builder-${{ github.sha }}
 
+      - name: Write checksum
+        run: sha256sum "${{ steps.version.outputs.bundle }}" > "${{ steps.version.outputs.bundle }}.sha256"
+
       - uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-path: ${{ steps.version.outputs.bundle }}
@@ -128,7 +131,9 @@ jobs:
       - name: Upload Flatpak artifact to release
         uses: softprops/action-gh-release@v3.0.3
         with:
-          files: ${{ steps.version.outputs.bundle }}
+          files: |
+            ${{ steps.version.outputs.bundle }}
+            ${{ steps.version.outputs.bundle }}.sha256
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-deb:
@@ -169,6 +174,9 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager deb --target .
 
+      - name: Write checksum
+        run: sha256sum *.deb > "$(echo *.deb).sha256"
+
       - uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-path: "*.deb"
@@ -176,7 +184,9 @@ jobs:
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: reefgraph-deb
-          path: "*.deb"
+          path: |
+            *.deb
+            *.deb.sha256
 
   build-rpm:
     name: Build .rpm package
@@ -214,6 +224,9 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: VERSION="${RELEASE_TAG#v}" nfpm package --config nfpm.yaml --packager rpm --target .
 
+      - name: Write checksum
+        run: sha256sum *.rpm > "$(echo *.rpm).sha256"
+
       - uses: actions/attest-build-provenance@v4.2.2
         with:
           subject-path: "*.rpm"
@@ -221,7 +234,9 @@ jobs:
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: reefgraph-rpm
-          path: "*.rpm"
+          path: |
+            *.rpm
+            *.rpm.sha256
 
   native-packages-release:
     name: Attach .deb/.rpm packages to release
@@ -244,28 +259,7 @@ jobs:
         with:
           files: |
             *.deb
+            *.deb.sha256
             *.rpm
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  release-checksums:
-    name: Publish SHA256SUMS
-    needs: [native-packages-release, flatpak-release]
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.release.tag_name }}
-        run: |
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
-            --pattern '*.deb' --pattern '*.rpm' --pattern '*.flatpak'
-          sha256sum *.deb *.rpm *.flatpak > SHA256SUMS
-
-      - name: Upload checksums to the release
-        uses: softprops/action-gh-release@v3.0.3
-        with:
-          files: SHA256SUMS
+            *.rpm.sha256
           token: ${{ secrets.GITHUB_TOKEN }}

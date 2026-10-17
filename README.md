@@ -49,10 +49,10 @@ sudo apt install ./reefgraph_*_amd64.deb
 sudo dnf install ./reefgraph-*.x86_64.rpm
 ```
 
-Each release includes a `SHA256SUMS` file and a build attestation for every package:
+Each package comes with a `.sha256` file and a build attestation:
 
 ```bash
-sha256sum --check --ignore-missing SHA256SUMS
+sha256sum --check reefgraph_*_amd64.deb.sha256
 gh attestation verify reefgraph_*_amd64.deb --repo brpaz/reefgraph
 ```
 
